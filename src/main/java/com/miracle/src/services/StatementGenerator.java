@@ -93,6 +93,11 @@ public class StatementGenerator {
     public static void displayAllTransactions() {
         transactionManager.sortTransactions();
 
+        if (transactionManager.getTransactionCount() == 0) {
+            System.out.println("\nNo transactions found.");
+            return;
+        }
+
         System.out.println("\nALL TRANSACTIONS");
         System.out.println("=".repeat(90));
         System.out.printf("| %-6s | %-12s | %-15s | %-15s | %-12s | %-12s |\n",
@@ -101,6 +106,8 @@ public class StatementGenerator {
 
         for (int i = 0; i < transactionManager.getTransactionCount(); i++) {
             Transaction t = transactionManager.getTransaction(i);
+
+
 
             System.out.printf("| %-6s | %-12s | %-15s | %-15s | $%-11.2f | $%-11.2f |\n",
                     t.getTransactionId(),

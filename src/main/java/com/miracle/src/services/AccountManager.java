@@ -9,7 +9,9 @@ import com.miracle.src.models.exceptions.OverdraftExceededException;
 import com.miracle.src.models.exceptions.TransactionFailedException;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class AccountManager {
 
@@ -19,7 +21,7 @@ public class AccountManager {
     public static AccountManager getInstance() {
         return INSTANCE;
     }
-    private final List<Account> accounts = new ArrayList<>();
+    private final Map<String, Account> accounts = new HashMap<>();
     private AccountManager() {
     }
 
@@ -30,31 +32,28 @@ public class AccountManager {
         if (account == null) {
             throw new IllegalArgumentException("Account cannot be null");
         }
-        
-        // Ensure account is not already added
-        if (accounts.contains(account)) {
+        // Check if account already exist
+        if (accounts.containsKey(account.getAccountNumber())) {
             throw new IllegalArgumentException("Account already exists in the system");
         }
-        
-        accounts.add(account);
+
+        // Add account to the map if it does not exist.
+        accounts.put(account.getAccountNumber(), account);
         accountCount++;
     }
 
 
-    //    linear search through the Accounts array to find an account using
-//    the account number
+
+    // Get the account using the account number (key)
     public Account findAccount(String accountNumber) throws AccountNotFoundException {
         if (accountNumber == null || accountNumber.trim().isEmpty()) {
             throw new AccountNotFoundException("Account number cannot be empty");
         }
-
-        return accounts.stream()
-                .filter(acc -> acc.getAccountNumber().equalsIgnoreCase(accountNumber))
-                .findFirst()
-                .orElseThrow(() -> new AccountNotFoundException(
-                        "Account not found. Please check the account number and try again.",
-                        accountNumber
-                ));
+        Account account = accounts.get(accountNumber);
+        if (account == null) {
+            throw new AccountNotFoundException("Account not found: " + accountNumber);
+        }
+        return account;
     }
 
     //    Get all opened accounts in the banks
@@ -65,7 +64,7 @@ public class AccountManager {
                 "ACC NO", "CUSTOMER NAME", "TYPE", "BALANCE", "STATUS");
         System.out.println("-".repeat(83));
 
-        for (Account account : accounts) {
+        for (Account account : accounts.values()) {
             // Line 1: Main Account Details
             System.out.printf("| %-8s | %-25s | %-12s | $%,-13.2f | %-8s |%n",
                     account.getAccountNumber(),
@@ -96,18 +95,21 @@ public class AccountManager {
         if(accountCount == 0) {
             System.out.println("No accounts found." );
             return;
+        } else{
+             System.out.printf("%nTotal Accounts: %d %n", getAccountCount());
+             System.out.printf("Total Bank Balance: $%,.2f%n", getTotalBalance());
+             return;
         }
-        System.out.printf("%nTotal Accounts: %d %n", getAccountCount());
-        System.out.printf("Total Bank Balance: $%,.2f%n", getTotalBalance());
+       
     }
 
 
-    //    Get all the money available at the bank.
     public double getTotalBalance() {
-        return accounts.stream()
+        return accounts.values().stream()
                 .mapToDouble(Account::getBalance)
                 .sum();
     }
+
 
     //    Get the number of accounts opened at the bank.
     public int getAccountCount() {
@@ -207,7 +209,7 @@ public class AccountManager {
         System.out.printf("| %-6s | %-20s | %-5s | %-15s | %-20s | %-15s|%n", "ID", "NAME", "AGE", "CONTACT", "ADDRESS", "ACCOUNT TYPE");
         System.out.println("-".repeat(100));
 
-        for (Account account: accounts) {
+        for (Account account: accounts.values()) {
             Customer c = account.getCustomer();
 
             System.out.printf("| %-6s | %-20s | %-5d | %-15s | %-20s | %-15s|%n",

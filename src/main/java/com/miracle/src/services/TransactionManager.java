@@ -1,11 +1,11 @@
-// In TransactionManager.java, replace the entire content with:
 package com.miracle.src.services;
 
 import com.miracle.src.models.Account;
 import com.miracle.src.models.Transaction;
 import com.miracle.src.models.exceptions.TransactionFailedException;
+import com.miracle.src.utils.FunctionalUtils;
 
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Stack;
@@ -15,7 +15,7 @@ public class TransactionManager {
     private final ThreadLocal<Stack<TransactionContext>> transactionStack =
             ThreadLocal.withInitial(Stack::new);
     private final int MAX_TRANSACTION = 200;
-    private final Transaction[] transactions = new Transaction[MAX_TRANSACTION];
+    private List<Transaction> transactions = new ArrayList<>(MAX_TRANSACTION);
     private int transactionCount = 0;
 
     public static TransactionManager getInstance() {
@@ -23,6 +23,7 @@ public class TransactionManager {
     }
 
     private TransactionManager() {}
+
 
     // Transaction Management Methods
     public void beginTransaction(Account... accounts) {
@@ -67,39 +68,34 @@ public class TransactionManager {
         if (transaction == null) {
             throw new IllegalArgumentException("Transaction cannot be null");
         }
-
-        if (transactionCount >= transactions.length) {
-            throw new IllegalStateException(
-                    "Transaction Manager storage limit reached (" + MAX_TRANSACTION +
-                            "). Cannot record new transaction."
-            );
-        }
-
-        transactions[transactionCount++] = transaction;
+        transactions.add(transaction);
     }
+
 
     public List<Transaction> getTransactionsByAccount(String accountNumber) {
-        sortTransactions();
-        return Arrays.stream(transactions, 0, transactionCount)
-                .filter(t -> t != null && t.getAccountNumber().equalsIgnoreCase(accountNumber))
-                .toList();
+        return FunctionalUtils.filterTransactions(transactions, 
+            t -> t.getAccountNumber().equalsIgnoreCase(accountNumber));
     }
-
-
 
     public void sortTransactions() {
-        // Sort transactions by timestamp (most recent first)
-        Arrays.sort(transactions, 0, transactionCount,
-                Comparator.nullsLast(Comparator.comparing(Transaction::getTimestamp).reversed())
-        );
+        transactions.sort(Comparator.comparing(Transaction::getTimestamp).reversed());
     }
+
+    public void sortTransactionsByAmount() {
+        transactions = FunctionalUtils.sortTransactionsByAmount(transactions);
+    }
+
+    public void sortTransactionsByDate() {
+        transactions = FunctionalUtils.sortTransactionsByDate(transactions);
+    }
+
 
     // In TransactionManager.java
     public Transaction getTransaction(int index) {
         if (index < 0 || index >= transactionCount) {
             throw new IndexOutOfBoundsException("Invalid transaction index: " + index);
         }
-        return transactions[index];
+        return transactions.get(index);
     }
 
     public int getTransactionCount() {
