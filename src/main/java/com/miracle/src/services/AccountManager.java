@@ -9,11 +9,8 @@ import com.miracle.src.models.exceptions.OverdraftExceededException;
 import com.miracle.src.utils.FileIOUtils;
 //import com.miracle.src.utils.FileIOUtils;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.io.IOException;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class AccountManager {
@@ -68,8 +65,9 @@ public class AccountManager {
         System.out.printf("| %-8s | %-25s | %-12s | %-14s | %-8s |%n",
                 "ACC NO", "CUSTOMER NAME", "TYPE", "BALANCE", "STATUS");
         System.out.println("-".repeat(83));
-
-        for (Account account : accounts.values()) {
+        List<Account> sortedAccounts = new ArrayList<>(this.accounts.values());
+        sortedAccounts.sort(Comparator.comparing(Account::getAccountNumber));
+        for (Account account : sortedAccounts) {
             // Line 1: Main Account Details
             System.out.printf("| %-8s | %-25s | %-12s | $%,-13.2f | %-8s |%n",
                     account.getAccountNumber(),
@@ -113,7 +111,7 @@ public class AccountManager {
                 .sum();
     }
 
-    public static void loadAccountsOnStart() {
+    public static void loadAccountsOnStart() throws IOException {
         FileIOUtils.readAccountsFromFile();
     }
 
@@ -153,6 +151,10 @@ public class AccountManager {
     }
 
 
+    public Collection<Account> getAllAccounts() {
+        return accounts.values();
+    }
+
     public void processTransaction(TransactionRequest request)
             throws InvalidAmountException, OverdraftExceededException, AccountNotFoundException {
         if (request == null) {
@@ -190,8 +192,6 @@ public class AccountManager {
                 throw new IllegalArgumentException("Invalid transaction type: " + transactionType);
         }
     }
-
-
 
     public void displayAllCustomers() {
         if (accountCount.get() == 0) {

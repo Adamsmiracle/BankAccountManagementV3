@@ -4,6 +4,7 @@ import com.miracle.src.dto.AccountRequest;
 import com.miracle.src.models.*;
 import com.miracle.src.models.exceptions.InvalidAmountException;
 import com.miracle.src.services.AccountManager;
+import com.miracle.src.services.TransactionManager;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -11,9 +12,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.*;
 import java.util.stream.Collectors;
@@ -91,24 +90,62 @@ public class FileIOUtils {
     }
 
 
-    public static List<String> readAccountsFromFile(){
-        List<String> lines = new ArrayList<>();
-        if (Files.notExists(accountFile)){
-            System.err.println("File does not exist");
+    public static List<String> readAccountsFromFile() {
+        if (Files.notExists(accountFile)) {
+            System.err.println("Account file does not exist: " + accountFile);
             return List.of();
         }
 
-        try{
-            Stream<String> lineStream = Files.lines(accountFile);
-            lines = lineStream.filter(line -> !line.trim().isEmpty()).toList();
-            AtomicInteger NumOfAccounts = new AtomicInteger(lines.size());
-            lines.forEach(FileIOUtils::parseAccount);
-            accountManager.setAccountCount(NumOfAccounts);
-            return lines;
+        List<String> loadedAccounts = new ArrayList<>();
+        try {
+            // Get existing account numbers for quick lookup
+            Set<String> existingAccountNumbers = new HashSet<>(
+                    accountManager.getAllAccounts().stream()
+                            .map(Account::getAccountNumber)
+                            .collect(Collectors.toSet())
+            );
+
+            // Read and process lines
+            List<String> lines = Files.readAllLines(accountFile).stream()
+                    .filter(line -> !line.trim().isEmpty())
+                    .toList();
+
+            int skippedCount = 0;
+            int loadedCount = 0;
+
+            for (String line : lines) {
+                String accountNumber = extractAccountNumber(line);
+                if (accountNumber != null) {
+                    if (existingAccountNumbers.contains(accountNumber)) {
+                        skippedCount++;
+                        continue;
+                    }
+                    parseAccount(line);
+                    loadedAccounts.add(line);
+                    loadedCount++;
+                }
+            }
+
+            // Update account count
+            int totalAccounts = accountManager.getAccountCount();
+            accountManager.setAccountCount(new AtomicInteger(totalAccounts + loadedCount));
+
+            System.out.printf("Successfully loaded %d accounts.\n",
+                    loadedCount, skippedCount);
+
         } catch (IOException e) {
-            System.out.println("Failed to load data from file "+ e.getMessage());
+            System.err.println("Failed to load accounts from file: " + e.getMessage());
         }
-        return lines;
+        return loadedAccounts;
+    }
+
+    // Helper method to extract account number from a line
+    private static String extractAccountNumber(String line) {
+        if (line == null || line.trim().isEmpty()) {
+            return null;
+        }
+        String[] parts = line.split("\\|");
+        return (parts.length > 0) ? parts[0].trim() : null;
     }
 
 
@@ -139,26 +176,74 @@ public class FileIOUtils {
         }
     }
 
-    // Read transactions from file and return as Transaction objects
     public static List<Transaction> readTransactionsFromFile() {
-        List<Transaction> list = new ArrayList<>();
+        List<Transaction> newTransactions = new ArrayList<>();
         try {
             ensureDataDirExists();
+
             if (Files.notExists(transactionFile)) {
-                return List.of();
+                System.out.println("No transaction file found at: " + transactionFile);
+                return newTransactions;
             }
-            List<String> lines = Files.readAllLines(transactionFile)
-                    .stream()
-                    .filter(s -> s != null && !s.trim().isEmpty())
-                    .toList();
+
+            // Get existing transactions for comparison
+            List<Transaction> existingTransactions = TransactionManager.getInstance().getAllTransactions();
+            Set<Transaction> existingTransactionSet = new HashSet<>(existingTransactions);
+
+            // Read and process lines
+            List<String> lines;
+            try {
+                lines = Files.readAllLines(transactionFile);
+            } catch (IOException e) {
+                System.err.println("Error reading transaction file: " + e.getMessage());
+                return newTransactions;
+            }
+
+            int loadedCount = 0;
+            int duplicateCount = 0;
+            int errorCount = 0;
+
             for (String line : lines) {
-                Transaction t = Transaction.fromSerialized(line);
-                if (t != null) list.add(t);
+                if (line == null || line.trim().isEmpty()) {
+                    continue;
+                }
+
+                try {
+                    Transaction t = Transaction.fromSerialized(line.trim());
+                    if (t != null && t.getTransactionId() != null) {
+                        // Check if an equivalent transaction already exists
+                        if (!existingTransactionSet.contains(t)) {
+                            newTransactions.add(t);
+                            existingTransactionSet.add(t); // Add to set to prevent duplicates in the same file
+                            loadedCount++; // Increment ONLY when adding a new transaction
+                        } else {
+                            duplicateCount++;
+                        }
+                    }
+                } catch (Exception e) {
+                    errorCount++;
+                    System.err.println("Skipping invalid transaction: " + line);
+                    System.err.println("Error: " + e.getMessage());
+                }
             }
-        } catch (IOException e) {
-            System.err.println("Failed to read transactions: " + e.getMessage());
+
+            // Log summary
+            if (loadedCount > 0 || duplicateCount > 0 || errorCount > 0) {
+                System.out.println("Transaction loading summary:");
+                System.out.println("  - Successfully loaded: " + loadedCount);
+                if (duplicateCount > 0) {
+                    System.out.println("  - Skipped duplicates: " + duplicateCount);
+                }
+                if (errorCount > 0) {
+                    System.out.println("  - Errors encountered: " + errorCount);
+                }
+            }
+
+        } catch (Exception e) {
+            System.err.println("Fatal error loading transactions: " + e.getMessage());
+            e.printStackTrace();
         }
-        return list;
+        return newTransactions;
     }
 
     // Append multiple transactions (e.g., only new ones) to the file
@@ -180,6 +265,8 @@ public class FileIOUtils {
             System.err.println("Failed to append transactions: " + e.getMessage());
         }
     }
+
+
 
     private static void ensureDataDirExists() throws IOException {
         Path dir = Paths.get(DATA_DIR);

@@ -29,6 +29,7 @@ public class ConcurrencyUtils {
                         account.deposit(transactionAmount);
                         account.withdraw(transactionAmount);
 
+
                         successfulOps.getAndIncrement();
                     } catch (Exception e) {
                         failedOps.getAndIncrement();

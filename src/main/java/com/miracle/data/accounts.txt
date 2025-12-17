@@ -1,2 +1,2 @@
-ACC001|ksdjf slkdj|55|0555555555|34 kumasi|CUS001|Regular|Savings|1200.00
-ACC002|yaw yaw|44|0244444444|34 Kumasi|CUS002|Premium|Checking|10000.00
+ACC001|Adams Miracle|66|0555555555|4 kumasi|CUS001|Regular|Savings|12000.00
+ACC002|jaj jaj|45|0555555555|45 kumasi|CUS002|Premium|Checking|12000.00

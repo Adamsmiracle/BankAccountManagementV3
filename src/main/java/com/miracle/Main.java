@@ -39,7 +39,7 @@ public class Main {
 
 
 
-    public static void main(String[] args) throws InterruptedException, InvalidAmountException, OverdraftExceededException {
+    public static void main(String[] args) throws InterruptedException, InvalidAmountException, OverdraftExceededException, IOException {
 
         AccountManager.loadAccountsOnStart();
         TransactionManager.loadTransactionsOnStart();
@@ -48,16 +48,16 @@ public class Main {
 
     }
 
-    private static void runMainMenu() throws InvalidAmountException, OverdraftExceededException {
+    private static void runMainMenu() throws IOException {
         int choice;
         do {
             mainMenu();
             choice = InputUtils.readInt("Enter choice:> ");
             executeChoice(choice);
-        } while (choice != 6);
+        } while (choice != 7);
     }
 
-    private static void executeChoice(int choice) {
+    private static void executeChoice(int choice) throws IOException {
         try {
             switch (choice) {
                 case 1:
@@ -69,19 +69,20 @@ public class Main {
                     break;
 
                 case 3:
-                    concurrencyTest();
                     generateReports();
                     break;
 
                 case 4:
-                    runTest();
+                    saveOrLoadData();
                     break;
 
                 case  5:
                     concurrencyTest();
                     break;
+                case  6:
+                    runTest();
 
-                case 6:
+                case 7:
                     accountManager.saveAccountsOnExit();
                     transactionManager.saveTransactionsOnExit();
                     System.out.println("\nExiting application... \n");
@@ -95,7 +96,7 @@ public class Main {
             System.out.println("\nERROR: " + e.getMessage());
         }
 
-        if (choice != 6) {
+        if (choice != 7) {
             InputUtils.readLine("\nPress Enter to continue... ");
         }
     }
@@ -111,7 +112,8 @@ public class Main {
         System.out.println("3. Generate Statements");
         System.out.println("4. Save/Load Data");
         System.out.println("5. Run Concurrent Simulations");
-        System.out.println("6. Exit");
+        System.out.println("6. Run test");
+        System.out.println("7. Exit");
         System.out.println("\n");
     }
 
@@ -188,6 +190,29 @@ public class Main {
         }
     }
 
+
+    public  static void saveOrLoadData() throws IOException {
+        System.out.println("-".repeat(50));
+        System.out.println("||            SAVE/LOAD DATA MENU          ||");
+        System.out.println("-".repeat(50));
+        System.out.println("1. Save data");
+        System.out.println("2. Load data");
+        System.out.println("0. Back to Main Menu");
+        System.out.println("\n");
+
+
+        int choice = InputUtils.readInt("Enter choice:> ");
+        switch (choice){
+            case 1:
+                accountManager.saveAccountsOnExit();
+                transactionManager.saveTransactionsOnExit();
+                break;
+            case 2:
+                AccountManager.loadAccountsOnStart();
+                TransactionManager.loadTransactionsOnStart();
+        }
+
+    }
 
 
     public static void runTest() {

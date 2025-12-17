@@ -4,10 +4,7 @@ import com.miracle.src.models.Transaction;
 import com.miracle.src.utils.FileIOUtils;
 import com.miracle.src.utils.FunctionalUtils;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -79,6 +76,10 @@ public class TransactionManager {
         } catch (Exception e) {
             System.err.println("Failed to load transactions: " + e.getMessage());
         }
+    }
+
+    public static List<Transaction> getAllTransactions() {
+        return transactions;
     }
 
     public void saveTransactionsOnExit() {
