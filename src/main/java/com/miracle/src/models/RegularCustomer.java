@@ -3,7 +3,6 @@ package com.miracle.src.models;
 import java.io.Serializable;
 
 public class RegularCustomer extends Customer implements Serializable {
-    private static final long serialVersionUID = 1L;
 
     public RegularCustomer(String name, int age, String contact, String address) {
         super(name, age, contact, address);

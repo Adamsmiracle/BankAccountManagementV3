@@ -8,13 +8,11 @@ public class CheckingAccount extends Account {
 
     private double overDraftLimit = 1000.00; // Updated overdraft limit to $1000.00
     private final double monthlyFee = 10.00;
-    private double initialDeposit;
     private final TransactionManager manager = TransactionManager.getInstance();
 
     public CheckingAccount(Customer customer, double initialDeposit) throws InvalidAmountException {
         super(customer);
         this.setStatus("Active");
-        this.initialDeposit = initialDeposit;
         if (initialDeposit <= 0){
             throw new InvalidAmountException(initialDeposit);
         }
@@ -73,7 +71,7 @@ public class CheckingAccount extends Account {
             throw new InvalidAmountException(amount);
         }
         Transaction newTransaction;
-        synchronized (getBalanceLock()) {
+
             double resultingBalance = this.getBalance() - amount;
 
             if (amount > this.getBalance() + overDraftLimit) {
@@ -91,7 +89,6 @@ public class CheckingAccount extends Account {
                     -amount,
                     this.getBalance()
             );
-        }
         manager.addTransaction(newTransaction);
         return newTransaction;
     }
@@ -105,13 +102,11 @@ public class CheckingAccount extends Account {
             return true;
         }
 
-        synchronized (getBalanceLock()) {
             if (super.getBalance() - monthlyFee >= -overDraftLimit) {
                 super.updateBalance(super.getBalance() - monthlyFee);
                 return true;
             }
             return false;
-        }
     }
 
     public double getMonthlyFee() {
@@ -150,7 +145,6 @@ public class CheckingAccount extends Account {
             throw new InvalidAmountException(amount);
         }
         Transaction newTransaction;
-        synchronized (getBalanceLock()) {
             double resultingBalance = this.getBalance() - amount;
 
             if (resultingBalance < -getOverDraftLimit()) {
@@ -165,11 +159,6 @@ public class CheckingAccount extends Account {
                 throw new OverdraftExceededException(this.getBalance(), amount, overDraftLimit);
             }
 
-            // Ensure overdraft limit is dynamically adjustable
-            if (getCustomer() instanceof PremiumCustomer) {
-                this.overDraftLimit = 200.00; // Example adjustment for premium customers
-            }
-
             super.updateBalance(resultingBalance);
 
             newTransaction = new Transaction(
@@ -178,7 +167,6 @@ public class CheckingAccount extends Account {
                     amount,
                     resultingBalance
             );
-        }
         manager.addTransaction(newTransaction);
         return newTransaction;
     }

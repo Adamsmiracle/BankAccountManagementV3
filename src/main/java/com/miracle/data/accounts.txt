@@ -1,2 +1,1 @@
-ACC001|Adams Miracle|66|0555555555|4 kumasi|CUS001|Regular|Savings|12000.00
-ACC002|jaj jaj|45|0555555555|45 kumasi|CUS002|Premium|Checking|12000.00
+ACC001|akjfa ksld|33|0555555555|34 kumasi|CUS001|Premium|Checking|12000.00

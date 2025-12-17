@@ -44,8 +44,8 @@ public class TransactionManager {
     }
 
 
-    public void sortTransactionsByDate() {
-        FunctionalUtils.sortTransactionsByDate(transactions);
+    public List<Transaction> sortTransactionsByDate() {
+        return FunctionalUtils.sortTransactionsByDate(transactions);
     }
 
 
@@ -60,10 +60,25 @@ public class TransactionManager {
         return transactions.size();
     }
 
-    // Utility method to support tests: clear all stored transactions
-    public void clearTransactions() {
-            transactions.clear();
-            newTransactions.clear();
+    /**
+     * Gets transactions of a specific type
+     * @param type The transaction type (e.g., "DEPOSIT", "WITHDRAWAL", "TRANSFER")
+     * @return A list of transactions of the specified type
+     */
+    public List<Transaction> getTransactionsByType(String type) {
+        return transactions.stream()
+                .filter(t -> t.getType().equalsIgnoreCase(type))
+                .collect(Collectors.toList());
+    }
+
+
+    /**
+     * Groups transactions by their type (DEPOSIT, WITHDRAWAL, TRANSFER)
+     * @return A Map where the key is the transaction type and the value is a list of transactions of that type
+     */
+    public Map<String, List<Transaction>> groupTransactionsByType() {
+        return transactions.stream()
+                .collect(Collectors.groupingBy(Transaction::getType));
     }
 
     // Lifecycle persistence: load on start, save on exit
@@ -92,7 +107,7 @@ public class TransactionManager {
             List<Transaction> snapshot;
                 snapshot = new ArrayList<>(newTransactions);
                 newTransactions.clear();
-            FileIOUtils.appendTransactionsToFile(snapshot);
+            FileIOUtils.saveTransactionsToFile(snapshot);
         } catch (Exception e) {
             System.err.println(" error saving transactions: " + e.getMessage());
             e.printStackTrace();

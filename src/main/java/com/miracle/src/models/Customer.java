@@ -4,8 +4,6 @@ import java.io.Serializable;
 
 public abstract class Customer implements Serializable {
 
-    private static final long serialVersionUID = 1L;
-
 //    Static fields;
     public static int customerCounter = 0;
 

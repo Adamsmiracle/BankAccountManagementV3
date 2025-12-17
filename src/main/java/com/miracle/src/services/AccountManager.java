@@ -22,10 +22,16 @@ public class AccountManager {
     public static AccountManager getInstance() {
         return INSTANCE;
     }
+
+//    map for storing accounts
     private Map<String, Account> accounts = new HashMap<>();
+//    set for tracking newly created accounts
     private Set<String> newlyCreatedAccountNumbers = new HashSet<>();
+
     private AccountManager() {
     }
+
+
 
     public void setAccountCount(AtomicInteger accountCount) {
         this.accountCount = accountCount;

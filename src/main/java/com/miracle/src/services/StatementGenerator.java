@@ -3,6 +3,10 @@ import com.miracle.src.models.*;
 import com.miracle.src.models.exceptions.AccountNotFoundException;
 import com.miracle.src.utils.InputUtils;
 
+import javax.swing.plaf.synth.SynthOptionPaneUI;
+import java.util.List;
+import java.util.stream.IntStream;
+
 public class StatementGenerator {
     private static TransactionManager transactionManager = TransactionManager.getInstance();
     private static final AccountManager accountManager = AccountManager.getInstance();
@@ -91,9 +95,10 @@ public class StatementGenerator {
     }
 
     public static void displayAllTransactions() {
-        transactionManager.sortTransactionsByDate();
+        List<Transaction> sortedTransactions;
+        sortedTransactions = transactionManager.sortTransactionsByDate();
 
-        if (transactionManager.getTransactionCount() == 0) {
+        if (sortedTransactions.isEmpty()) {
             System.out.println("\nNo transactions found.");
             return;
         }
@@ -105,8 +110,7 @@ public class StatementGenerator {
         System.out.println("-".repeat(90));
 
         // Display using streams over the in-memory collection
-        java.util.stream.IntStream.range(0, transactionManager.getTransactionCount())
-                .mapToObj(transactionManager::getTransaction)
+        sortedTransactions.stream()
                 .filter(java.util.Objects::nonNull)
                 .forEach(t -> System.out.printf(
                         "| %-6s | %-12s | %-15s | %-15s | $%-11.2f | $%-11.2f |\n",
@@ -229,12 +233,14 @@ public class StatementGenerator {
 
     public static void requestAndGenerateStatement() {
         while (true) {
+            System.out.println("GENERATE ACCOUNT STATEMENT");
+            System.out.println("-".repeat(30));
             System.out.print("\nEnter account number to view statement (or type '0' to return): ");
             String accountNumber = InputUtils.readLine("> ");
 
             if (accountNumber.equalsIgnoreCase("0")) {
                 System.out.println("Returning to main menu...");
-                return; // Exit the method to return to the main menu
+                return;
             }
 
             // Attempt to generate statement

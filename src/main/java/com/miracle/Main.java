@@ -28,6 +28,8 @@ import org.junit.platform.launcher.listeners.TestExecutionSummary;
 import com.miracle.src.services.AccountManager;
 
 import java.io.IOException;
+import java.io.OutputStream;
+import java.io.PrintStream;
 
 
 public class Main {
@@ -41,6 +43,7 @@ public class Main {
 
     public static void main(String[] args) throws InterruptedException, InvalidAmountException, OverdraftExceededException, IOException {
 
+        System.out.println("\n Loading account data from files...\n");
         AccountManager.loadAccountsOnStart();
         TransactionManager.loadTransactionsOnStart();
         runMainMenu();
@@ -81,11 +84,24 @@ public class Main {
                     break;
                 case  6:
                     runTest();
-
+                    break;
                 case 7:
+                    PrintStream originalOut = System.out;
+                    System.setOut(new PrintStream(new OutputStream() {
+                        @Override
+                        public void write(int b) {
+                        }
+                    }));
+
                     accountManager.saveAccountsOnExit();
                     transactionManager.saveTransactionsOnExit();
-                    System.out.println("\nExiting application... \n");
+
+                    System.setOut(originalOut);
+                    System.out.println("\n╔═════════════════════════════════════════════════════════════╗");
+                    System.out.println("║  Thank you for using the Bank Account Management System    ║");
+                    System.out.println("║  Data automatically saved to disk.                         ║");
+                    System.out.println("║  Goodbye!                                                  ║");
+                    System.out.println("╚═════════════════════════════════════════════════════════════╝\n");
                     return;
 
                 default:
@@ -204,6 +220,8 @@ public class Main {
         int choice = InputUtils.readInt("Enter choice:> ");
         switch (choice){
             case 1:
+                System.out.println("\nSAVING ACCOUNT DATA");
+                System.out.println("=".repeat(30));
                 accountManager.saveAccountsOnExit();
                 transactionManager.saveTransactionsOnExit();
                 break;

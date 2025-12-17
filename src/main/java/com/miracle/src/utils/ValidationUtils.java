@@ -11,8 +11,6 @@ public final class ValidationUtils {
 
     // Precompiled patterns for performance and reuse
     private static final Pattern ACCOUNT_PATTERN = Pattern.compile("^ACC\\d{3}$");
-    private static final Pattern EMAIL_PATTERN = Pattern.compile("^[A-Za-z0-9+_-]+@[A-Za-z0-9.-]+$");
-
 
 
     public static String getValidatedInput(String prompt, String regexString, String errorMessage) {
@@ -31,9 +29,10 @@ public final class ValidationUtils {
 
             // Perform the Regex Validation Check
             if (pattern.matcher(input).matches()) {
+                System.out.println("✓ Input accepted!");
                 return input; // Success!
             } else {
-                System.out.println("Invalid format. " + errorMessage);
+                System.out.println("Error: "+ errorMessage);
             }
         }
     }
@@ -43,7 +42,7 @@ public final class ValidationUtils {
         int age;
         while (true){
                 age = InputUtils.readInt(prompt);
-                if (age > 0 && age < 120) {
+                if (age > 18 && age < 120) {
                     return age;
                 }
             System.out.println(errorMessage);
@@ -72,26 +71,6 @@ public final class ValidationUtils {
             }
 
             System.out.println("Invalid account format. Account number must be ACC followed by three digits.");
-        }
-    }
-
-
-    /**
-     * Prompts for and validates an email address using Pattern/Matcher.
-     * Regex: ^[A-Za-z0-9+_-]+@[A-Za-z0-9.-]+$
-     */
-    public static String getValidEmail(String prompt) {
-        while (true) {
-            String email = InputUtils.readLine(prompt);
-            if (email == null || email.trim().isEmpty()) {
-                System.out.println("Input cannot be empty. Please try again.");
-                continue;
-            }
-            Matcher matcher = EMAIL_PATTERN.matcher(email.trim());
-            if (matcher.matches()) {
-                return email.trim();
-            }
-            System.out.println("Invalid email format. Please enter a valid email (e.g., user@example.com).");
         }
     }
 

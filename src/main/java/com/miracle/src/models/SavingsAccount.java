@@ -7,10 +7,8 @@ import java.io.Serializable;
 
 public class SavingsAccount extends Account implements Serializable {
 
-//    private static final long serialVersionUID = 1L;
-
     // --- Private Fields
-    private final double interestRate;
+    private final double interestRate = 0.035;
     private final static double minimumBalance = 500.00;
     private final TransactionManager manager = TransactionManager.getInstance();
 
@@ -27,7 +25,6 @@ public class SavingsAccount extends Account implements Serializable {
             );
         }
         super(customer);  // Creates account
-        this.interestRate = 0.035;
         this.setStatus("Active");
         super.updateBalance(initialDeposit);
 
@@ -73,7 +70,7 @@ public class SavingsAccount extends Account implements Serializable {
         }
 
         Transaction newTransaction;
-        synchronized (getBalanceLock()) {
+
             super.updateBalance(this.getBalance() + amount);
 
             newTransaction = new Transaction(
@@ -82,7 +79,6 @@ public class SavingsAccount extends Account implements Serializable {
                     amount,
                     this.getBalance()
             );
-        }
         manager.addTransaction(newTransaction);
         return newTransaction;
     }
@@ -109,7 +105,6 @@ public class SavingsAccount extends Account implements Serializable {
         }
 
         Transaction newTransaction;
-        synchronized (getBalanceLock()) {
             // Calculate resulting balance with current snapshot
             double resultingBalance = this.getBalance() - amount;
 
@@ -153,7 +148,6 @@ public class SavingsAccount extends Account implements Serializable {
                     amount,
                     resultingBalanceFinal
             );
-        }
         manager.addTransaction(newTransaction);
         return newTransaction;
     }

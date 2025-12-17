@@ -1,7 +1,7 @@
 package com.miracle.src.models;
 
 public class PremiumCustomer extends Customer {
-    private double minimumBalance;
+    private static double minimumBalance = 10000.00;
 
     public PremiumCustomer(String name, int age, String contact, String address) {
         super(name, age, contact, address);
@@ -31,16 +31,9 @@ public class PremiumCustomer extends Customer {
         return true;
     }
 
-    public double getMinimumBalance() {
-        return this.minimumBalance;
+    public static double getMinimumBalance() {
+        return minimumBalance;
     }
 
-    public boolean setMinimumBalance(double amount){
-        if (amount > 0) {
-            this.minimumBalance = amount;
-            return true;
-        }
-        return false;
-    }
 
 }

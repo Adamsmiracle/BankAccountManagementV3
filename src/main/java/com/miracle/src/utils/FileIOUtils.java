@@ -12,10 +12,14 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.*;
 import java.util.stream.Collectors;
+
+import static com.miracle.src.models.Transaction.TIMESTAMP_FORMATTER;
 
 public class FileIOUtils {
     private static final String DATA_DIR = "src/main/java/com/miracle/data";
@@ -26,9 +30,9 @@ public class FileIOUtils {
     private static final String ACCOUNTS_FILE_NAME = "accounts.txt";
     private static final String TRANSACTIONS_FILE_NAME = "transactions.txt";
 
+
     private static final Path accountFile = Paths.get(DATA_DIR, ACCOUNTS_FILE_NAME);
     private static final Path transactionFile = Paths.get(DATA_DIR, TRANSACTIONS_FILE_NAME);
-
 
 
     public static void saveAccountToFile(Map<String, Account> accounts) {
@@ -130,8 +134,7 @@ public class FileIOUtils {
             int totalAccounts = accountManager.getAccountCount();
             accountManager.setAccountCount(new AtomicInteger(totalAccounts + loadedCount));
 
-            System.out.printf("Successfully loaded %d accounts.\n",
-                    loadedCount, skippedCount);
+            System.out.printf(loadedCount + " accounts loaded Successfully from accounts.txt.\n");
 
         } catch (IOException e) {
             System.err.println("Failed to load accounts from file: " + e.getMessage());
@@ -176,6 +179,22 @@ public class FileIOUtils {
         }
     }
 
+
+
+    // Factory to rebuild a transaction from a serialized line
+    public static Transaction deserializeTransaction(String line) {
+        if (line == null || line.trim().isEmpty()) return null;
+        String[] parts = line.split("\\|");
+        if (parts.length < 6) return null;
+        String id = parts[0].trim();
+        String accNo = parts[1].trim();
+        String type = parts[2].trim();
+        double amount = Double.parseDouble(parts[3].trim());
+        double balanceAfter = Double.parseDouble(parts[4].trim());
+        LocalDateTime ts = LocalDateTime.parse(parts[5].trim(), TIMESTAMP_FORMATTER);
+        return new Transaction(id, accNo, type, amount, balanceAfter, ts);
+    }
+
     public static List<Transaction> readTransactionsFromFile() {
         List<Transaction> newTransactions = new ArrayList<>();
         try {
@@ -209,13 +228,13 @@ public class FileIOUtils {
                 }
 
                 try {
-                    Transaction t = Transaction.fromSerialized(line.trim());
+                    Transaction t = deserializeTransaction(line.trim());
                     if (t != null && t.getTransactionId() != null) {
                         // Check if an equivalent transaction already exists
                         if (!existingTransactionSet.contains(t)) {
                             newTransactions.add(t);
-                            existingTransactionSet.add(t); // Add to set to prevent duplicates in the same file
-                            loadedCount++; // Increment ONLY when adding a new transaction
+                            existingTransactionSet.add(t);
+                            loadedCount++;
                         } else {
                             duplicateCount++;
                         }
@@ -229,8 +248,7 @@ public class FileIOUtils {
 
             // Log summary
             if (loadedCount > 0 || duplicateCount > 0 || errorCount > 0) {
-                System.out.println("Transaction loading summary:");
-                System.out.println("  - Successfully loaded: " + loadedCount);
+                System.out.println( loadedCount + " transactions loaded from transactions.txt: ");
                 if (duplicateCount > 0) {
                     System.out.println("  - Skipped duplicates: " + duplicateCount);
                 }
@@ -247,7 +265,7 @@ public class FileIOUtils {
     }
 
     // Append multiple transactions (e.g., only new ones) to the file
-    public static void appendTransactionsToFile(List<Transaction> txns) {
+    public static void saveTransactionsToFile(List<Transaction> txns) {
         if (txns == null || txns.isEmpty()) return;
         List<String> lines = txns.stream()
                 .map(FileIOUtils::serializeTransaction)

@@ -14,8 +14,6 @@ public abstract class Account implements Serializable {
     private volatile double balance;
     private String status = "Active";
     private final Customer customer;
-    // Per-account lock to synchronize critical sections (deposits/withdrawals)
-    private final Object balanceLock = new Object();
 
 
     public Account(Customer customer) {
@@ -63,18 +61,11 @@ public abstract class Account implements Serializable {
      * when changing the balance.
      */
     public synchronized double updateBalance(double newBalance) {
-        synchronized (balanceLock) {
+
             this.balance = newBalance;
             return this.balance;
         }
-    }
 
-    /**
-     * Expose the per-account lock to subclasses for synchronizing critical updates.
-     */
-    protected Object getBalanceLock() {
-        return balanceLock;
-    }
 
     public void setStatus(String status) {
         this.status = status;

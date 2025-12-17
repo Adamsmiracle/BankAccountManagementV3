@@ -1,6 +1,8 @@
 package com.miracle.src.utils;
 
 import com.miracle.src.dto.AccountRequest;
+import com.miracle.src.models.Customer;
+import com.miracle.src.models.PremiumCustomer;
 import com.miracle.src.models.SavingsAccount;
 
 import java.util.InputMismatchException;
@@ -19,7 +21,7 @@ public class AccountCreationInput {
         try {
 
             String name = ValidationUtils.getValidatedInput(
-                    "Enter customer name: ", NAME_REGEX,
+                    "Enter customer name (Eg: John Mahama): ", NAME_REGEX,
                     "Enter at least FirstName and SurName"
             );
 
@@ -29,12 +31,12 @@ public class AccountCreationInput {
             );
 
             String contact = ValidationUtils.getValidatedInput(
-                    "Enter customer contact: ",
+                    "Enter customer contact (Eg. 0241081635): ",
                     CONTACT_REGEX,
-                    "Enter valid contact"
+                    "Invalid contact format. Please enter a valid contact (Eg. 0241081635)"
             );
             String address = ValidationUtils.getValidatedInput(
-                    "Enter customer address: ",
+                    "Enter customer address (Eg. 123 Ayeduase Kumasi) : ",
                     ADDRESS_REGEX,
                     "Enter a valid address format (eg: 123 Oak Street, Springfield)"
             );
@@ -80,7 +82,8 @@ public class AccountCreationInput {
                 try {
                     initialDeposit = ValidationUtils.getValidAmount("Enter initial deposit: ");
 
-                    if (customerType == 2 && initialDeposit < 10000.00) {
+                    PremiumCustomer PremiumCustomer = null;
+                    if (customerType == 2 && initialDeposit < PremiumCustomer.getMinimumBalance()) {
                         System.out.println("Premium customers require minimum initial deposit of $10,000.00\n");
                         continue;
 
