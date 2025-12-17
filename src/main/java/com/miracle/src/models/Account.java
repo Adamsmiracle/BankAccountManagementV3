@@ -1,5 +1,6 @@
 package com.miracle.src.models;
 
+import com.miracle.src.models.exceptions.InsufficientFundsException;
 import com.miracle.src.models.exceptions.InvalidAmountException;
 import com.miracle.src.models.exceptions.OverdraftExceededException;
 
@@ -23,8 +24,8 @@ public abstract class Account implements Serializable {
     }
 
     // Abstract methods for deposit and withdraw
-    public abstract Transaction deposit(double amount) throws InvalidAmountException;
-    public abstract Transaction withdraw(double amount) throws InvalidAmountException, OverdraftExceededException;
+    public abstract Transaction deposit(double amount) throws InvalidAmountException, InsufficientFundsException;
+    public abstract Transaction withdraw(double amount) throws InvalidAmountException, OverdraftExceededException, InsufficientFundsException;
     
     // Overloaded methods with transaction type for transfers
     public abstract Transaction depositWithType(double amount, String transactionType)
@@ -93,7 +94,7 @@ public abstract class Account implements Serializable {
     protected abstract void displaySpecificDetails();
 
 
-    public void processTransaction(double amount, String type) throws InvalidAmountException, OverdraftExceededException {
+    public void processTransaction(double amount, String type) throws InvalidAmountException, OverdraftExceededException, InsufficientFundsException {
         if (amount <= 0) {
             throw new InvalidAmountException(amount);
         }

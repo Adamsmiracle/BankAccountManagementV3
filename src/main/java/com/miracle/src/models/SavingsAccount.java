@@ -1,5 +1,6 @@
 package com.miracle.src.models;
 
+import com.miracle.src.models.exceptions.InsufficientFundsException;
 import com.miracle.src.models.exceptions.InvalidAmountException;
 import com.miracle.src.services.TransactionManager;
 
@@ -84,10 +85,17 @@ public class SavingsAccount extends Account implements Serializable {
     }
 
     @Override
-    public synchronized Transaction withdraw(double amount) throws InvalidAmountException {
+    public synchronized Transaction withdraw(double amount) throws InvalidAmountException, InsufficientFundsException {
         if (amount <= 0){
             throw new InvalidAmountException(amount);
         }
+
+        double minBalance = getMinimumBalance();
+        if (super.getBalance() - amount < minBalance) {
+            throw new InsufficientFundsException(
+                    String.format("Withdrawal would violate minimum balance requirement of $%,.2f", minBalance));
+        }
+
         return withdrawWithType(amount, "Withdrawal");
     }
 

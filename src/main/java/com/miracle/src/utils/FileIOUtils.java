@@ -6,14 +6,12 @@ import com.miracle.src.models.exceptions.InvalidAmountException;
 import com.miracle.src.services.AccountManager;
 import com.miracle.src.services.TransactionManager;
 
-import java.io.BufferedWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.*;

@@ -1,5 +1,6 @@
 package com.miracle.src.models;
 
+import com.miracle.src.models.exceptions.InsufficientFundsException;
 import com.miracle.src.models.exceptions.InvalidAmountException;
 import com.miracle.src.models.exceptions.OverdraftExceededException;
 import com.miracle.src.services.TransactionManager;
@@ -66,10 +67,18 @@ public class CheckingAccount extends Account {
 
 
     @Override
-    public synchronized Transaction withdraw(double amount) throws InvalidAmountException, OverdraftExceededException {
+    public synchronized Transaction withdraw(double amount) throws InvalidAmountException, OverdraftExceededException, InsufficientFundsException {
         if (amount <= 0) {
             throw new InvalidAmountException(amount);
         }
+
+        double available = super.getBalance() + overDraftLimit;
+        if (amount > available) {
+            throw new InsufficientFundsException(
+                    String.format("Insufficient funds including overdraft. Available: $%,.2f, Attempted: $%,.2f",
+                            available, amount));
+        }
+
         Transaction newTransaction;
 
             double resultingBalance = this.getBalance() - amount;

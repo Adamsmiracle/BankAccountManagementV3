@@ -1,6 +1,7 @@
 package com.miracle.runner;
 
 import com.miracle.src.models.Customer;
+import com.miracle.src.models.exceptions.InsufficientFundsException;
 import com.miracle.src.models.exceptions.OverdraftExceededException;
 import com.miracle.src.services.TransactionManager;
 import org.junit.jupiter.api.Test;
@@ -313,7 +314,7 @@ public class TransactionManagerTest {
 
     @Test
     @DisplayName("Should record withdrawal transaction from checking account")
-    public void testIntegration_RecordWithdrawalFromCheckingAccount() throws InvalidAmountException, OverdraftExceededException {
+    public void testIntegration_RecordWithdrawalFromCheckingAccount() throws InvalidAmountException, OverdraftExceededException, InsufficientFundsException {
         CheckingAccount account = new CheckingAccount(testCustomer, 1000.0);
         int initialCount = transactionManager.getTransactionCount();
 

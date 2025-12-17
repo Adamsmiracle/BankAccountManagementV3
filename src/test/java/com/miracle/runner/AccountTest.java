@@ -69,7 +69,7 @@ public class AccountTest extends Exception {
     }
 
     @Test
-    public void testCheckingAccount_Withdraw_Valid() throws InvalidAmountException, OverdraftExceededException {
+    public void testCheckingAccount_Withdraw_Valid() throws InvalidAmountException, OverdraftExceededException, InsufficientFundsException {
         CheckingAccount account = new CheckingAccount(regularCustomer, 100.0);
         Transaction txn = account.withdraw(30.0);
 
@@ -79,7 +79,7 @@ public class AccountTest extends Exception {
     }
 
     @Test
-    public void testCheckingAccount_Withdraw_WithinOverdraft() throws InvalidAmountException, OverdraftExceededException {
+    public void testCheckingAccount_Withdraw_WithinOverdraft() throws InvalidAmountException, OverdraftExceededException, InsufficientFundsException {
         CheckingAccount account = new CheckingAccount(regularCustomer, 50.0);
         Transaction txn = account.withdraw(100.0);
 

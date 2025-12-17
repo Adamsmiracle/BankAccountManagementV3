@@ -4,6 +4,7 @@ import com.miracle.src.dto.AccountRequest;
 import com.miracle.src.dto.TransactionRequest;
 import com.miracle.src.models.*;
 import com.miracle.src.models.exceptions.AccountNotFoundException;
+import com.miracle.src.models.exceptions.InsufficientFundsException;
 import com.miracle.src.models.exceptions.InvalidAmountException;
 import com.miracle.src.models.exceptions.OverdraftExceededException;
 import com.miracle.src.utils.FileIOUtils;
@@ -71,9 +72,7 @@ public class AccountManager {
         System.out.printf("| %-8s | %-25s | %-12s | %-14s | %-8s |%n",
                 "ACC NO", "CUSTOMER NAME", "TYPE", "BALANCE", "STATUS");
         System.out.println("-".repeat(83));
-        List<Account> sortedAccounts = new ArrayList<>(this.accounts.values());
-        sortedAccounts.sort(Comparator.comparing(Account::getAccountNumber));
-        for (Account account : sortedAccounts) {
+        for (Account account : accounts.values()) {
             // Line 1: Main Account Details
             System.out.printf("| %-8s | %-25s | %-12s | $%,-13.2f | %-8s |%n",
                     account.getAccountNumber(),
@@ -113,6 +112,7 @@ public class AccountManager {
 
     public double getTotalBalance() {
         return accounts.values().stream()
+                .parallel()
                 .mapToDouble(Account::getBalance)
                 .sum();
     }
@@ -161,8 +161,10 @@ public class AccountManager {
         return accounts.values();
     }
 
+
+    // In AccountManager.java
     public void processTransaction(TransactionRequest request)
-            throws InvalidAmountException, OverdraftExceededException, AccountNotFoundException {
+            throws InvalidAmountException, AccountNotFoundException, InsufficientFundsException, OverdraftExceededException {
         if (request == null) {
             throw new IllegalArgumentException("Transaction request cannot be null");
         }
@@ -171,31 +173,46 @@ public class AccountManager {
         String userAccountNumber = request.getUserAccountNumber();
         double amount = request.getAmount();
 
-        // Find the source account
-        Account userAccount = findAccount(userAccountNumber);
+        try {
+            Account userAccount = findAccount(userAccountNumber);
 
-        switch (transactionType.toUpperCase()) {
-            case "DEPOSIT":
-                userAccount.processTransaction(amount, "Deposit");
-                break;
+            switch (transactionType.toUpperCase()) {
+                case "DEPOSIT":
+                    userAccount.processTransaction(amount, "Deposit");
+                    break;
+                case "WITHDRAWAL":
+                    userAccount.processTransaction(amount, "Withdrawal");
+                    break;
+                case "TRANSFER":
+                    String receiverAccountNumber = request.getReceiverAccountNumber();
+                    if (receiverAccountNumber == null || receiverAccountNumber.trim().isEmpty()) {
+                        throw new IllegalArgumentException("Receiver account number is required for transfer");
+                    }
 
-            case "WITHDRAWAL":
-                userAccount.processTransaction(amount, "Withdrawal");
-                break;
-
-            case "TRANSFER":
-                String receiverAccountNumber = request.getReceiverAccountNumber();
-                if (receiverAccountNumber == null || receiverAccountNumber.trim().isEmpty()) {
-                    throw new IllegalArgumentException("Receiver account number is required for transfer");
-                }
-
-                Account receiverAccount = findAccount(receiverAccountNumber);
-                userAccount.processTransaction(amount, "Transfer");
-                receiverAccount.processTransaction(amount, "Receive");
-                break;
-
-            default:
-                throw new IllegalArgumentException("Invalid transaction type: " + transactionType);
+                    Account receiverAccount = findAccount(receiverAccountNumber);
+                    // First withdraw from source
+                    userAccount.processTransaction(amount, "Transfer_Out");
+                    // Then deposit to receiver
+                    try {
+                        receiverAccount.processTransaction(amount, "Transfer_In");
+                    } catch (Exception e) {
+                        // If deposit to receiver fails, refund the source account
+                        userAccount.deposit(amount);
+                        throw new InsufficientFundsException("Transfer failed: " + e.getMessage());
+                    }
+                    break;
+                default:
+                    throw new IllegalArgumentException("Invalid transaction type: " + transactionType);
+            }
+        } catch (AccountNotFoundException e) {
+            System.err.println("Account not found: " + e.getMessage());
+            throw e;
+        } catch (InsufficientFundsException e) {
+            System.err.println("Insufficient funds for transaction: " + e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            System.err.println("Transaction failed: " + e.getMessage());
+            throw new RuntimeException("Transaction processing failed", e);
         }
     }
 
