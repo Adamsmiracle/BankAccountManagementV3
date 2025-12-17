@@ -4,6 +4,8 @@ import com.miracle.src.services.AccountManager;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class Transaction {
 
@@ -28,6 +30,47 @@ public class Transaction {
         this.amount = amount;
         this.balanceAfter = balanceAfter;
         this.timestamp = LocalDateTime.now();
+    }
+
+    // Private constructor used for loading from file without affecting the counter
+    private Transaction(String transactionId, String accountNumber, String type,
+                        double amount, double balanceAfter, LocalDateTime timestamp) {
+        this.transactionId = transactionId;
+        this.accountNumber = accountNumber;
+        this.type = type;
+        this.amount = amount;
+        this.balanceAfter = balanceAfter;
+        this.timestamp = timestamp;
+        // Ensure the counter is at least as high as this ID number
+        updateCounterFromId(transactionId);
+    }
+
+    private static void updateCounterFromId(String id) {
+        try {
+            Pattern p = Pattern.compile("TXN(\\d{3,})");
+            Matcher m = p.matcher(id);
+            if (m.matches()) {
+                int num = Integer.parseInt(m.group(1));
+                if (num > transactionCounter) {
+                    transactionCounter = num;
+                }
+            }
+        } catch (Exception ignored) {
+        }
+    }
+
+    // Factory to rebuild a transaction from a serialized line
+    public static Transaction fromSerialized(String line) {
+        if (line == null || line.trim().isEmpty()) return null;
+        String[] parts = line.split("\\|");
+        if (parts.length < 6) return null;
+        String id = parts[0].trim();
+        String accNo = parts[1].trim();
+        String type = parts[2].trim();
+        double amount = Double.parseDouble(parts[3].trim());
+        double balanceAfter = Double.parseDouble(parts[4].trim());
+        LocalDateTime ts = LocalDateTime.parse(parts[5].trim(), TIMESTAMP_FORMATTER);
+        return new Transaction(id, accNo, type, amount, balanceAfter, ts);
     }
 
     public static String getNextTransactionId() {

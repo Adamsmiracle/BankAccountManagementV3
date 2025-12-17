@@ -16,7 +16,7 @@ public class StatementGenerator {
     public static void viewAllTransactionByAccount(String accountNumber) {
 
         try {
-            transactionManager.sortTransactions();
+            transactionManager.sortTransactionsByDate();
 
             Account account = accountManager.findAccount(accountNumber);
 
@@ -91,7 +91,7 @@ public class StatementGenerator {
     }
 
     public static void displayAllTransactions() {
-        transactionManager.sortTransactions();
+        transactionManager.sortTransactionsByDate();
 
         if (transactionManager.getTransactionCount() == 0) {
             System.out.println("\nNo transactions found.");
@@ -104,20 +104,19 @@ public class StatementGenerator {
                 "ID", "ACCOUNT", "TYPE", "TIMESTAMP", "AMOUNT", "BALANCE");
         System.out.println("-".repeat(90));
 
-        for (int i = 0; i < transactionManager.getTransactionCount(); i++) {
-            Transaction t = transactionManager.getTransaction(i);
-
-
-
-            System.out.printf("| %-6s | %-12s | %-15s | %-15s | $%-11.2f | $%-11.2f |\n",
-                    t.getTransactionId(),
-                    t.getAccountNumber(),
-                    t.getType(),
-                    t.getFormattedTimestamp(),
-                    t.getAmount(),
-                    t.getBalanceAfter()
-            );
-        }
+        // Display using streams over the in-memory collection
+        java.util.stream.IntStream.range(0, transactionManager.getTransactionCount())
+                .mapToObj(transactionManager::getTransaction)
+                .filter(java.util.Objects::nonNull)
+                .forEach(t -> System.out.printf(
+                        "| %-6s | %-12s | %-15s | %-15s | $%-11.2f | $%-11.2f |\n",
+                        t.getTransactionId(),
+                        t.getAccountNumber(),
+                        t.getType(),
+                        t.getFormattedTimestamp(),
+                        t.getAmount(),
+                        t.getBalanceAfter()
+                ));
 
         System.out.println("=".repeat(90));
     }
@@ -149,7 +148,7 @@ public class StatementGenerator {
 
     public static Account generateStatement(String accountNumber) {
         try {
-            transactionManager.sortTransactions();
+            transactionManager.sortTransactionsByDate();
 
             // Try to find account
             Account account = accountManager.findAccount(accountNumber);

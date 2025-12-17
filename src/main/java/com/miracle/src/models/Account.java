@@ -3,14 +3,21 @@ package com.miracle.src.models;
 import com.miracle.src.models.exceptions.InvalidAmountException;
 import com.miracle.src.models.exceptions.OverdraftExceededException;
 
-public abstract class Account {
+import java.io.Serializable;
+
+public abstract class Account implements Serializable {
+    private static final long serialVersionUID = 1L;
     public static int accountCounter = 0;
 
     //    private field
     private String accountNumber;
-    private double balance;
+    // Balance is accessed by multiple threads during concurrent transactions.
+    // Use volatile + per-account lock to ensure visibility and atomic updates.
+    private volatile double balance;
     private String status = "Active";
     private final Customer customer;
+    // Per-account lock to synchronize critical sections (deposits/withdrawals)
+    private final Object balanceLock = new Object();
 
 
     public Account(Customer customer) {
@@ -24,8 +31,10 @@ public abstract class Account {
     public abstract Transaction withdraw(double amount) throws InvalidAmountException, OverdraftExceededException;
     
     // Overloaded methods with transaction type for transfers
-    public abstract Transaction depositWithType(double amount, String transactionType) throws InvalidAmountException;
-    public abstract Transaction withdrawWithType(double amount, String transactionType) throws InvalidAmountException, OverdraftExceededException;
+    public abstract Transaction depositWithType(double amount, String transactionType)
+            throws InvalidAmountException;
+    public abstract Transaction withdrawWithType(double amount, String transactionType)
+            throws InvalidAmountException, OverdraftExceededException;
 
     // GETTERS
     public String getAccountNumber() {
@@ -45,12 +54,28 @@ public abstract class Account {
     }
 
     // SETTERS
-    public void setAccountNumber(String accountNumber) {
-        this.accountNumber = accountNumber;
-    }
 
     public void setBalance(double balance) {
         this.balance = balance;
+    }
+
+    /**
+     * Thread-safe balance update helper. Sets the balance inside the per-account lock
+     * and returns the updated value. Subclasses should prefer this over direct setBalance
+     * when changing the balance.
+     */
+    public synchronized double updateBalance(double newBalance) {
+        synchronized (balanceLock) {
+            this.balance = newBalance;
+            return this.balance;
+        }
+    }
+
+    /**
+     * Expose the per-account lock to subclasses for synchronizing critical updates.
+     */
+    protected Object getBalanceLock() {
+        return balanceLock;
     }
 
     public void setStatus(String status) {
@@ -60,7 +85,6 @@ public abstract class Account {
     // ABSTRACT METHODS
     public abstract String getAccountType();
     
-    // Template method for displaying account details
     public void displayAccountDetails() {
         System.out.println("✔ Account created successfully!");
         System.out.println("Account Number: " + getAccountNumber());
@@ -103,8 +127,7 @@ public abstract class Account {
             throw new IllegalArgumentException("Invalid transaction type: " + type);
         }
 
-        if (result == null) {
-            return; // Exit gracefully without logging success for failed transactions
-        }
     }
+
+
 }

@@ -2,10 +2,16 @@ package com.miracle.src.utils;
 
 import java.util.Scanner;
 import java.util.regex.Pattern;
+import java.util.regex.Matcher;
+import java.util.function.Predicate;
 
 import com.miracle.src.utils.InputUtils.*;
 
 public final class ValidationUtils {
+
+    // Precompiled patterns for performance and reuse
+    private static final Pattern ACCOUNT_PATTERN = Pattern.compile("^ACC\\d{3}$");
+    private static final Pattern EMAIL_PATTERN = Pattern.compile("^[A-Za-z0-9+_-]+@[A-Za-z0-9.-]+$");
 
 
 
@@ -45,8 +51,6 @@ public final class ValidationUtils {
     }
 
     public static String getValidAccountNumber(String transfer) {
-        final String ACCOUNT_REGEX = "^ACC\\d{3}$";
-
         while (true) {
             String accountNumber;
 
@@ -62,7 +66,8 @@ public final class ValidationUtils {
             }
 
             // Validate format
-            if (accountNumber.matches(ACCOUNT_REGEX)) {
+            Matcher matcher = ACCOUNT_PATTERN.matcher(accountNumber);
+            if (matcher.matches()) {
                 return accountNumber;
             }
 
@@ -71,8 +76,26 @@ public final class ValidationUtils {
     }
 
 
+    /**
+     * Prompts for and validates an email address using Pattern/Matcher.
+     * Regex: ^[A-Za-z0-9+_-]+@[A-Za-z0-9.-]+$
+     */
+    public static String getValidEmail(String prompt) {
+        while (true) {
+            String email = InputUtils.readLine(prompt);
+            if (email == null || email.trim().isEmpty()) {
+                System.out.println("Input cannot be empty. Please try again.");
+                continue;
+            }
+            Matcher matcher = EMAIL_PATTERN.matcher(email.trim());
+            if (matcher.matches()) {
+                return email.trim();
+            }
+            System.out.println("Invalid email format. Please enter a valid email (e.g., user@example.com).");
+        }
+    }
 
-    // In ValidationUtils.java
+
     public static double getValidAmount(String promptMessage) {
         while (true) {
             try {
@@ -91,54 +114,4 @@ public final class ValidationUtils {
             }
         }
     }
-
-
-    // In ValidationUtils.java
-    public static double getValidAmount(String promptMessage, double minAmount, double maxAmount) {
-        while (true) {
-            try {
-                String input = InputUtils.readLine(promptMessage);
-                double amount = Double.parseDouble(input);
-
-                if (amount < minAmount) {
-                    System.out.printf("Amount must be at least $%.2f. Please try again.\n", minAmount);
-                    continue;
-                }
-
-                if (maxAmount > 0 && amount > maxAmount) {
-                    System.out.printf("Amount cannot exceed $%.2f. Please try again.\n", maxAmount);
-                    continue;
-                }
-
-                return amount;
-
-            } catch (NumberFormatException e) {
-                System.out.println("Invalid amount. Please enter a valid number.");
-            }
-        }
-    }
-
-
-    public static double getValidAmount(String promptMessage, double minAmount) {
-        while (true) {
-            try {
-                String input = InputUtils.readLine(promptMessage);
-                double amount = Double.parseDouble(input);
-
-                if (amount < minAmount) {
-                    System.out.printf("Initial deposit must be at least $%.2f. Please try again.\n", minAmount);
-                    continue;
-                }
-                return amount;
-
-            } catch (NumberFormatException e) {
-                System.out.println("Invalid amount. Please enter a valid number.");
-            }
-        }
-    }
-
-
-
-
-
 }

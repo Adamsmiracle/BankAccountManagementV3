@@ -1,0 +1,2 @@
+ACC001|ksdjf slkdj|55|0555555555|34 kumasi|CUS001|Regular|Savings|1200.00
+ACC002|yaw yaw|44|0244444444|34 Kumasi|CUS002|Premium|Checking|10000.00

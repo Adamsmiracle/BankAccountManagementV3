@@ -8,7 +8,6 @@ public class CheckingAccount extends Account {
 
     private double overDraftLimit = 1000.00; // Updated overdraft limit to $1000.00
     private final double monthlyFee = 10.00;
-    private final double minimumBalance = 50.00; // Minimum balance requirement
     private double initialDeposit;
     private final TransactionManager manager = TransactionManager.getInstance();
 
@@ -20,7 +19,7 @@ public class CheckingAccount extends Account {
             throw new InvalidAmountException(initialDeposit);
         }
 
-        super.setBalance(initialDeposit);
+        super.updateBalance(initialDeposit);
         // Log initial deposit as a transaction
         Transaction initialTransaction = new Transaction(
             this.getAccountNumber(),
@@ -31,12 +30,12 @@ public class CheckingAccount extends Account {
         manager.addTransaction(initialTransaction);
     }
 
- 
+
 
     @Override
     protected void displaySpecificDetails() {
         System.out.printf("Overdraft Limit: $%,.2f\n", getOverDraftLimit());
-        
+
         if (getCustomer() instanceof PremiumCustomer && ((PremiumCustomer) getCustomer()).hasWaivedFees()) {
             System.out.println("Monthly Fee: Waived (Premium customer)");
         } else {
@@ -45,18 +44,18 @@ public class CheckingAccount extends Account {
     }
 
     @Override
-    public Transaction deposit(double amount) throws InvalidAmountException {
+    public synchronized Transaction deposit(double amount) throws InvalidAmountException {
         if (amount <= 0) {
             throw new InvalidAmountException(amount);
         }
-
-        this.setBalance(this.getBalance() + amount);
-        Transaction newTransaction = new Transaction(
-                this.getAccountNumber(),
-                "Deposit",
-                amount,
-                this.getBalance()
-        );
+        Transaction newTransaction;
+            super.updateBalance(this.getBalance() + amount);
+            newTransaction = new Transaction(
+                    this.getAccountNumber(),
+                    "Deposit",
+                    amount,
+                    this.getBalance()
+            );
         manager.addTransaction(newTransaction);
         return newTransaction;
     }
@@ -69,32 +68,30 @@ public class CheckingAccount extends Account {
 
 
     @Override
-    public Transaction withdraw(double amount) throws InvalidAmountException, OverdraftExceededException {
+    public synchronized Transaction withdraw(double amount) throws InvalidAmountException, OverdraftExceededException {
         if (amount <= 0) {
             throw new InvalidAmountException(amount);
         }
+        Transaction newTransaction;
+        synchronized (getBalanceLock()) {
+            double resultingBalance = this.getBalance() - amount;
 
-        double resultingBalance = this.getBalance() - amount;
+            if (amount > this.getBalance() + overDraftLimit) {
+                throw new OverdraftExceededException(this.getBalance(), amount, overDraftLimit);
+            }
 
-        if (amount > this.getBalance() + overDraftLimit) {
-            throw new OverdraftExceededException(this.getBalance(), amount, overDraftLimit);
+            if (resultingBalance < -overDraftLimit) {
+                throw new OverdraftExceededException(this.getBalance(), amount, overDraftLimit);
+            }
+
+            super.updateBalance(resultingBalance);
+            newTransaction = new Transaction(
+                    this.getAccountNumber(),
+                    "Withdrawal",
+                    -amount,
+                    this.getBalance()
+            );
         }
-
-        // if (resultingBalance < minimumBalance) {
-        //     throw new OverdraftExceededException(this.getBalance(), amount, minimumBalance);
-        // }
-
-        if (resultingBalance < -overDraftLimit) {
-            throw new OverdraftExceededException(this.getBalance(), amount, overDraftLimit);
-        }
-
-        this.setBalance(resultingBalance);
-        Transaction newTransaction = new Transaction(
-                this.getAccountNumber(),
-                "Withdrawal",
-                -amount,
-                this.getBalance()
-        );
         manager.addTransaction(newTransaction);
         return newTransaction;
     }
@@ -108,11 +105,13 @@ public class CheckingAccount extends Account {
             return true;
         }
 
-        if (super.getBalance() - monthlyFee >= -overDraftLimit) {
-            super.setBalance(super.getBalance() - monthlyFee);
-            return true;
+        synchronized (getBalanceLock()) {
+            if (super.getBalance() - monthlyFee >= -overDraftLimit) {
+                super.updateBalance(super.getBalance() - monthlyFee);
+                return true;
+            }
+            return false;
         }
-        return false;
     }
 
     public double getMonthlyFee() {
@@ -123,27 +122,22 @@ public class CheckingAccount extends Account {
         return overDraftLimit;
     }
 
-    public double getMinimumBalance() {
-        return minimumBalance;
-    }
-
-
-
     @Override
-    public Transaction depositWithType(double amount, String transactionType) {
+    public synchronized Transaction depositWithType(double amount, String transactionType) {
         if (amount <= 0) {
             System.out.println("Deposit amount must be positive.");
             return null;
         }
 
-        this.setBalance(this.getBalance() + amount);
+        Transaction newTransaction;
+            super.updateBalance(this.getBalance() + amount);
+            newTransaction = new Transaction(
+                    this.getAccountNumber(),
+                    transactionType,
+                    amount,
+                    this.getBalance()
+            );
 
-        Transaction newTransaction = new Transaction(
-                this.getAccountNumber(),
-                transactionType,
-                amount,
-                this.getBalance()
-        );
 
         manager.addTransaction(newTransaction);
         return newTransaction;
@@ -151,37 +145,40 @@ public class CheckingAccount extends Account {
 
 
     @Override
-    public Transaction withdrawWithType(double amount, String transactionType) throws InvalidAmountException, OverdraftExceededException {
+    public synchronized Transaction withdrawWithType(double amount, String transactionType) throws InvalidAmountException, OverdraftExceededException {
         if (amount <= 0) {
             throw new InvalidAmountException(amount);
         }
-        double resultingBalance = this.getBalance() - amount;
+        Transaction newTransaction;
+        synchronized (getBalanceLock()) {
+            double resultingBalance = this.getBalance() - amount;
 
-        if (resultingBalance < -getOverDraftLimit()) {
-            throw new OverdraftExceededException(
-                this.getBalance(),
-                amount,
-                getOverDraftLimit()
+            if (resultingBalance < -getOverDraftLimit()) {
+                throw new OverdraftExceededException(
+                    this.getBalance(),
+                    amount,
+                    getOverDraftLimit()
+                );
+            }
+
+            if (amount > this.getBalance() + overDraftLimit) {
+                throw new OverdraftExceededException(this.getBalance(), amount, overDraftLimit);
+            }
+
+            // Ensure overdraft limit is dynamically adjustable
+            if (getCustomer() instanceof PremiumCustomer) {
+                this.overDraftLimit = 200.00; // Example adjustment for premium customers
+            }
+
+            super.updateBalance(resultingBalance);
+
+            newTransaction = new Transaction(
+                    this.getAccountNumber(),
+                    transactionType,
+                    amount,
+                    resultingBalance
             );
         }
-
-        if (amount > this.getBalance() + overDraftLimit) {
-            throw new OverdraftExceededException(this.getBalance(), amount, overDraftLimit);
-        }
-
-        // Ensure overdraft limit is dynamically adjustable
-        if (getCustomer() instanceof PremiumCustomer) {
-            this.overDraftLimit = 200.00; // Example adjustment for premium customers
-        }
-
-        super.setBalance(resultingBalance);
-
-        Transaction newTransaction = new Transaction(
-                this.getAccountNumber(),
-                transactionType,
-                amount,
-                resultingBalance
-        );
         manager.addTransaction(newTransaction);
         return newTransaction;
     }

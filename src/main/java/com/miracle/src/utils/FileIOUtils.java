@@ -1,29 +1,286 @@
 package com.miracle.src.utils;
 
-import com.miracle.src.models.Account;
+import com.miracle.src.dto.AccountRequest;
+import com.miracle.src.models.*;
+import com.miracle.src.models.exceptions.InvalidAmountException;
+import com.miracle.src.services.AccountManager;
 
-import java.io.*;
-import java.util.HashMap;
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.*;
+import java.util.stream.Collectors;
 
 public class FileIOUtils {
+    private static final String DATA_DIR = "src/main/java/com/miracle/data";
 
-    private static final String ACCOUNTS_FILE = "accounts.dat";
+    private static final AccountManager accountManager = AccountManager.getInstance();
 
-    public static void saveAccounts(Map<String, Account> accounts) throws IOException {
-        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(ACCOUNTS_FILE))) {
-            oos.writeObject(accounts);
+
+    private static final String ACCOUNTS_FILE_NAME = "accounts.txt";
+    private static final String TRANSACTIONS_FILE_NAME = "transactions.txt";
+
+    private static final Path accountFile = Paths.get(DATA_DIR, ACCOUNTS_FILE_NAME);
+    private static final Path transactionFile = Paths.get(DATA_DIR, TRANSACTIONS_FILE_NAME);
+
+
+
+    public static void saveAccountToFile(Map<String, Account> accounts) {
+        List<String> lines = serializeAccounts(accounts);
+        Path backupFile = Paths.get(DATA_DIR, ACCOUNTS_FILE_NAME + ".bak");
+        
+        try {
+            if (Files.exists(accountFile)) {
+                Files.copy(accountFile, backupFile, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            }
+            
+            // Write new data
+            Files.write(
+                    accountFile,
+                    lines,
+                    StandardOpenOption.CREATE,
+                    StandardOpenOption.WRITE,
+                    StandardOpenOption.TRUNCATE_EXISTING
+            );
+            System.out.println("Successfully saved " + lines.size() + " accounts.");
+            
+            if (Files.exists(backupFile)) {
+                Files.delete(backupFile);
+            }
+        } catch (IOException e) {
+            System.err.println("Failed to write accounts to file: " + e.getMessage());
+            
+            // Attempt to restore from backup
+            try {
+                if (Files.exists(backupFile)) {
+                    Files.copy(backupFile, accountFile, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                    System.err.println("Restored accounts from backup.");
+                }
+            } catch (IOException restoreError) {
+                System.err.println("Failed to restore backup: " + restoreError.getMessage());
+            }
         }
     }
 
-    public static Map<String, Account> loadAccounts() throws IOException, ClassNotFoundException {
-        File file = new File(ACCOUNTS_FILE);
-        if (!file.exists()) {
-            return new HashMap<>();
+    // Append only the provided accounts to the accounts file without touching existing data
+    public static void appendAccountsToFile(Map<String, Account> accountsToAppend) {
+        if (accountsToAppend == null || accountsToAppend.isEmpty()) {
+            System.out.println("No new accounts to save.");
+            return;
         }
 
-        try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(file))) {
-            return (Map<String, Account>) ois.readObject();
+        List<String> lines = serializeAccounts(accountsToAppend);
+        try {
+            Files.write(
+                    accountFile,
+                    lines,
+                    StandardOpenOption.CREATE,
+                    StandardOpenOption.APPEND
+            );
+            System.out.println("Successfully saved " + lines.size() + " new account" + (lines.size() == 1 ? "." : "s."));
+        } catch (IOException e) {
+            System.err.println("Failed to append accounts to file: " + e.getMessage());
+        }
+    }
+
+
+    public static List<String> readAccountsFromFile(){
+        List<String> lines = new ArrayList<>();
+        if (Files.notExists(accountFile)){
+            System.err.println("File does not exist");
+            return List.of();
+        }
+
+        try{
+            Stream<String> lineStream = Files.lines(accountFile);
+            lines = lineStream.filter(line -> !line.trim().isEmpty()).toList();
+            AtomicInteger NumOfAccounts = new AtomicInteger(lines.size());
+            lines.forEach(FileIOUtils::parseAccount);
+            accountManager.setAccountCount(NumOfAccounts);
+            return lines;
+        } catch (IOException e) {
+            System.out.println("Failed to load data from file "+ e.getMessage());
+        }
+        return lines;
+    }
+
+
+    public static void writeToTransaction() {
+        try {
+            ensureDataDirExists();
+            if (Files.notExists(transactionFile)) {
+                Files.createFile(transactionFile);
+            }
+        } catch (IOException ignored) {
+        }
+    }
+
+    // Persist a single transaction entry to the transactions file
+    public static void SaveTransactionToFile(Transaction txn) {
+        if (txn == null) return;
+        String line = serializeTransaction(txn);
+        try {
+            ensureDataDirExists();
+            Files.write(
+                    transactionFile,
+                    List.of(line),
+                    StandardOpenOption.CREATE,
+                    StandardOpenOption.APPEND
+            );
+        } catch (IOException e) {
+            System.err.println("Failed to append transaction: " + e.getMessage());
+        }
+    }
+
+    // Read transactions from file and return as Transaction objects
+    public static List<Transaction> readTransactionsFromFile() {
+        List<Transaction> list = new ArrayList<>();
+        try {
+            ensureDataDirExists();
+            if (Files.notExists(transactionFile)) {
+                return List.of();
+            }
+            List<String> lines = Files.readAllLines(transactionFile)
+                    .stream()
+                    .filter(s -> s != null && !s.trim().isEmpty())
+                    .toList();
+            for (String line : lines) {
+                Transaction t = Transaction.fromSerialized(line);
+                if (t != null) list.add(t);
+            }
+        } catch (IOException e) {
+            System.err.println("Failed to read transactions: " + e.getMessage());
+        }
+        return list;
+    }
+
+    // Append multiple transactions (e.g., only new ones) to the file
+    public static void appendTransactionsToFile(List<Transaction> txns) {
+        if (txns == null || txns.isEmpty()) return;
+        List<String> lines = txns.stream()
+                .map(FileIOUtils::serializeTransaction)
+                .collect(Collectors.toList());
+        try {
+            ensureDataDirExists();
+            Files.write(
+                    transactionFile,
+                    lines,
+                    StandardOpenOption.CREATE,
+                    StandardOpenOption.APPEND
+            );
+            System.out.println("Successfully saved " + lines.size() + " new transaction" + (lines.size()==1?"":"s") + ".");
+        } catch (IOException e) {
+            System.err.println("Failed to append transactions: " + e.getMessage());
+        }
+    }
+
+    private static void ensureDataDirExists() throws IOException {
+        Path dir = Paths.get(DATA_DIR);
+        if (Files.notExists(dir)) {
+            Files.createDirectories(dir);
+        }
+    }
+
+    // Serialize a transaction into a pipe-delimited line compatible with file storage
+    public static String serializeTransaction(Transaction t) {
+        return String.join("|",
+                t.getTransactionId(),
+                t.getAccountNumber(),
+                t.getType(),
+                String.format("%.2f", t.getAmount()),
+                String.format("%.2f", t.getBalanceAfter()),
+                t.getFormattedTimestamp()
+        );
+    }
+
+
+//    sE
+    public static List<String> serializeAccounts(Map<String, Account> accounts) {
+        return accounts.entrySet().stream()
+                .map(entry -> {
+                    String accountNumber = entry.getKey();
+                    Account account = entry.getValue();
+                    Customer customer = account.getCustomer();
+
+                    return String.join("|",
+                            accountNumber,
+                            customer.getName(),
+                            String.valueOf(customer.getAge()),
+                            customer.getContact(),
+                            customer.getAddress(),
+                            customer.getCustomerId(),
+                            customer.getCustomerType(),
+                            account.getAccountType(),
+                            String.format("%.2f", account.getBalance())
+                    );
+                })
+                .toList();
+    }
+
+
+    public static void parseAccount(String line) {
+        if (line == null || line.trim().isEmpty()) {
+            System.err.println("Empty line in account file");
+            return;
+        }
+
+        String[] column = line.split("\\|");
+
+        try {
+            int index = 0;
+            String accountNumber = column[index++].trim();
+            String customerName = column[index++].trim();
+            int customerAge = Integer.parseInt(column[index++].trim());
+            String customerContact = column[index++].trim();
+            String customerAddress = column[index++].trim();
+
+            // Determine if we have customer ID or if we're at customer type
+            String customerId;
+            String customerType;
+
+            if (column.length == 9) {
+                // New format with customer ID
+                customerId = column[index++].trim();
+                customerType = column[index++].trim();
+            } else if (column.length == 8) {
+                // Old format without customer ID
+                customerId = "CUS" + String.format("%03d", Customer.customerCounter++);
+                customerType = column[index++].trim();
+            } else {
+                System.err.println("Invalid account format: " + line);
+                return;
+            }
+
+            String accountType = column[index++].trim();
+            double balance = Double.parseDouble(column[index].trim());
+
+            // Create the account request
+            AccountRequest request = new AccountRequest(
+                    customerName,
+                    customerAge,
+                    customerContact,
+                    customerAddress,
+                    "Regular".equalsIgnoreCase(customerType) ? 1 : 2,
+                    "Savings".equalsIgnoreCase(accountType) ? 1 : 2,
+                    balance
+            );
+
+            accountManager.createAccountFromFile(request);
+
+        } catch (NumberFormatException e) {
+            System.err.println("Invalid number format in account data: " + e.getMessage());
+        } catch (InvalidAmountException e) {
+            System.err.println("Invalid amount in account data: " + e.getMessage());
+        } catch (Exception e) {
+            System.err.println("Error processing account: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 }

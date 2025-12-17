@@ -15,12 +15,14 @@ public class FunctionalUtils {
                 .collect(Collectors.toList());
     }
 
+
     public static List<Transaction> sortTransactionsByAmount(List<Transaction> transactions) {
         return transactions.stream()
                 .sorted(Comparator.comparing(Transaction::getAmount))
                 .collect(Collectors.toList());
     }
 
+    
     public static List<Transaction> sortTransactionsByDate(List<Transaction> transactions) {
         return transactions.stream()
                 .sorted(Comparator.comparing(Transaction::getTimestamp))

@@ -3,7 +3,11 @@ package com.miracle.src.models;
 import com.miracle.src.models.exceptions.InvalidAmountException;
 import com.miracle.src.services.TransactionManager;
 
-public class SavingsAccount extends Account {
+import java.io.Serializable;
+
+public class SavingsAccount extends Account implements Serializable {
+
+//    private static final long serialVersionUID = 1L;
 
     // --- Private Fields
     private final double interestRate;
@@ -25,7 +29,7 @@ public class SavingsAccount extends Account {
         super(customer);  // Creates account
         this.interestRate = 0.035;
         this.setStatus("Active");
-        super.setBalance(initialDeposit);
+        super.updateBalance(initialDeposit);
 
         try {
             Transaction initialTransaction = new Transaction(
@@ -54,12 +58,12 @@ public class SavingsAccount extends Account {
     }
 
     @Override
-    public Transaction deposit(double amount) throws InvalidAmountException {
+    public synchronized Transaction deposit(double amount) throws InvalidAmountException {
         return depositWithType(amount, "Deposit");
     }
 
     @Override
-    public Transaction depositWithType(double amount, String transactionType) throws InvalidAmountException {
+    public synchronized Transaction depositWithType(double amount, String transactionType) throws InvalidAmountException {
         if (amount <= 0) {
             throw new InvalidAmountException(amount);
         }
@@ -68,21 +72,23 @@ public class SavingsAccount extends Account {
             throw new IllegalArgumentException("Transaction type cannot be null or empty");
         }
 
-        this.setBalance(this.getBalance() + amount);
+        Transaction newTransaction;
+        synchronized (getBalanceLock()) {
+            super.updateBalance(this.getBalance() + amount);
 
-        Transaction newTransaction = new Transaction(
-                this.getAccountNumber(),
-                transactionType,
-                amount,
-                this.getBalance()
-        );
-
+            newTransaction = new Transaction(
+                    this.getAccountNumber(),
+                    transactionType,
+                    amount,
+                    this.getBalance()
+            );
+        }
         manager.addTransaction(newTransaction);
         return newTransaction;
     }
 
     @Override
-    public Transaction withdraw(double amount) throws InvalidAmountException {
+    public synchronized Transaction withdraw(double amount) throws InvalidAmountException {
         if (amount <= 0){
             throw new InvalidAmountException(amount);
         }
@@ -90,7 +96,7 @@ public class SavingsAccount extends Account {
     }
 
     @Override
-    public Transaction withdrawWithType(double amount, String transactionType)
+    public synchronized Transaction withdrawWithType(double amount, String transactionType)
             throws InvalidAmountException {
 
         if (amount <= 0) {
@@ -102,46 +108,53 @@ public class SavingsAccount extends Account {
             throw new IllegalArgumentException("Transaction type cannot be null or empty");
         }
 
-        // Calculate resulting balance
-        double resultingBalance = this.getBalance() - amount;
+        Transaction newTransaction;
+        synchronized (getBalanceLock()) {
+            // Calculate resulting balance with current snapshot
+            double resultingBalance = this.getBalance() - amount;
 
-        // Check against minimum balance
-        if (resultingBalance < minimumBalance) {
-            java.util.Scanner scanner = new java.util.Scanner(System.in);
-            while (true) {
-                System.out.printf(
-                    "Transaction failed: Withdrawal of $%.2f would result in a balance of $%.2f, which is below the minimum balance of $%.2f.\n",
-                    amount, resultingBalance, minimumBalance
-                );
-                System.out.println("Please enter a new amount that will not violate the minimum balance, or type 0 to go back:");
-                double newAmount = scanner.nextDouble();
+            // Check against minimum balance
+            if (resultingBalance < minimumBalance) {
+                java.util.Scanner scanner = new java.util.Scanner(System.in);
+                while (true) {
+                    System.out.printf(
+                        "Transaction failed: Withdrawal of $%.2f would result in a balance of $%.2f, which is below the minimum balance of $%.2f.\n",
+                        amount, resultingBalance, minimumBalance
+                    );
+                    System.out.println("Please enter a new amount that will not violate the minimum balance, or type 0 to go back:");
+                    double newAmount = scanner.nextDouble();
 
-                if (newAmount == 0) {
-                    return null; // Exit the transaction
-                }
+                    if (newAmount == 0) {
+                        return null; // Exit the transaction
+                    }
 
-                resultingBalance = this.getBalance() - newAmount;
-                if (resultingBalance >= minimumBalance) {
-                    amount = newAmount; // Update the amount to the valid value
-                    break;
+                    resultingBalance = this.getBalance() - newAmount;
+                    if (resultingBalance >= minimumBalance) {
+                        amount = newAmount; // Update the amount to the valid value
+                        break;
+                    }
                 }
             }
+
+            // Update account balance
+            double resultingBalanceFinal = this.getBalance() - amount;
+            super.updateBalance(resultingBalanceFinal);
+
+            // Record the transaction
+            new Transaction(
+                    this.getAccountNumber(),
+                    transactionType,
+                    amount,
+                    resultingBalanceFinal
+            );
+            newTransaction = new Transaction(
+                    this.getAccountNumber(),
+                    transactionType,
+                    amount,
+                    resultingBalanceFinal
+            );
         }
-
-
-
-        // Update account balance
-        super.setBalance(resultingBalance);
-
-        // Record the transaction
-        Transaction newTransaction = new Transaction(
-                this.getAccountNumber(),
-                transactionType,
-                amount,
-                resultingBalance
-        );
         manager.addTransaction(newTransaction);
-
         return newTransaction;
     }
 

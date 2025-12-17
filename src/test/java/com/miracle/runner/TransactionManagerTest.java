@@ -12,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import com.miracle.src.models.*;
 import com.miracle.src.models.exceptions.InvalidAmountException;
 
-import java.lang.reflect.Field;
+// removed reflection usage; no imports needed
 
 public class TransactionManagerTest {
 
@@ -37,25 +37,12 @@ public class TransactionManagerTest {
     }
 
     /**
-     * Helper method to reset the transaction manager's internal state using reflection
+     * Helper method to reset the transaction manager using its public API
      */
     private void resetTransactionManager() {
         try {
-            Field transactionsField = TransactionManager.class.getDeclaredField("transactions");
-            transactionsField.setAccessible(true);
-            Transaction[] transactions = (Transaction[]) transactionsField.get(transactionManager);
-
-            Field countField = TransactionManager.class.getDeclaredField("transactionCount");
-            countField.setAccessible(true);
-
-            // Clear all transactions
-            for (int i = 0; i < transactions.length; i++) {
-                transactions[i] = null;
-            }
-            countField.set(transactionManager, 0);
-
+            transactionManager.clearTransactions();
         } catch (Exception e) {
-            // If reflection fails, tests may have side effects
             System.err.println("Warning: Could not reset TransactionManager: " + e.getMessage());
         }
     }
@@ -116,7 +103,7 @@ public class TransactionManagerTest {
         transactionManager.addTransaction(txn2);
         transactionManager.addTransaction(txn3);
 
-        assertEquals( + 3, transactionManager.getTransactionCount());
+        assertEquals(initialCount + 3, transactionManager.getTransactionCount());
     }
 
     @Test
@@ -131,24 +118,16 @@ public class TransactionManagerTest {
     }
 
     @Test
-    @DisplayName("Should throw IllegalStateException when storage limit is reached")
-    public void testAddTransaction_StorageLimitReached() {
-        // Fill up the transaction manager (MAX_TRANSACTION = 200)
-        for (int i = 0; i < 200; i++) {
-            Transaction txn = new Transaction("ACC001", "Deposit", 10.0, 1000.0 + (i * 10));
-            transactionManager.addTransaction(txn);
-        }
-
-        // Try to add one more
-        Transaction overflowTransaction = new Transaction("ACC001", "Deposit", 10.0, 3000.0);
-
-        IllegalStateException exception = assertThrows(
-                IllegalStateException.class,
-                () -> transactionManager.addTransaction(overflowTransaction)
-        );
-
-        assertTrue(exception.getMessage().contains("storage limit") ||
-                exception.getMessage().contains("200"));
+    @DisplayName("Should support dynamic growth beyond 200 transactions without error")
+    public void testAddTransaction_NoStorageLimitWithArrayList() {
+        int toAdd = 205;
+        assertDoesNotThrow(() -> {
+            for (int i = 0; i < toAdd; i++) {
+                Transaction txn = new Transaction("ACC001", "Deposit", 10.0, 1000.0 + (i * 10));
+                transactionManager.addTransaction(txn);
+            }
+        });
+        assertEquals(toAdd, transactionManager.getTransactionCount());
     }
 
     @Test
@@ -214,25 +193,22 @@ public class TransactionManagerTest {
         transactionManager.addTransaction(txn2);
         transactionManager.addTransaction(txn3);
 
-        transactionManager.sortTransactions();
+        transactionManager.sortTransactionsByDate();
 
-        // Access transactions using reflection to verify order
-        Field transactionsField = TransactionManager.class.getDeclaredField("transactions");
-        transactionsField.setAccessible(true);
-        Transaction[] transactions = (Transaction[]) transactionsField.get(transactionManager);
+        // Verify order using public getters (most recent first)
+        Transaction first = transactionManager.getTransaction(0);
+        Transaction second = transactionManager.getTransaction(1);
+        Transaction third = transactionManager.getTransaction(2);
 
-        // Most recent should be first
-        assertTrue(transactions[0].getTimestamp().isAfter(transactions[1].getTimestamp()) ||
-                transactions[0].getTimestamp().equals(transactions[1].getTimestamp()));
-        assertTrue(transactions[1].getTimestamp().isAfter(transactions[2].getTimestamp()) ||
-                transactions[1].getTimestamp().equals(transactions[2].getTimestamp()));
+        assertTrue(!first.getTimestamp().isBefore(second.getTimestamp()));
+        assertTrue(!second.getTimestamp().isBefore(third.getTimestamp()));
     }
 
     @Test
     @DisplayName("Should handle sorting empty transaction list")
     public void testSortTransactions_EmptyList() {
         // Should not throw exception
-        assertDoesNotThrow(() -> transactionManager.sortTransactions());
+        assertDoesNotThrow(() -> transactionManager.sortTransactionsByDate());
         assertEquals(0, transactionManager.getTransactionCount());
     }
 
@@ -242,7 +218,7 @@ public class TransactionManagerTest {
         Transaction txn = new Transaction("ACC001", "Deposit", 100.0, 1100.0);
         transactionManager.addTransaction(txn);
 
-        assertDoesNotThrow(() -> transactionManager.sortTransactions());
+        assertDoesNotThrow(() -> transactionManager.sortTransactionsByDate());
         assertEquals(1, transactionManager.getTransactionCount());
     }
 
@@ -260,7 +236,7 @@ public class TransactionManagerTest {
         transactionManager.addTransaction(txn3);
 
         int countBeforeSort = transactionManager.getTransactionCount();
-        transactionManager.sortTransactions();
+        transactionManager.sortTransactionsByDate();
         int countAfterSort = transactionManager.getTransactionCount();
 
         assertEquals(countBeforeSort, countAfterSort);
@@ -401,7 +377,7 @@ public class TransactionManagerTest {
             }
         }
 
-        assertDoesNotThrow(() -> transactionManager.sortTransactions());
+        assertDoesNotThrow(() -> transactionManager.sortTransactionsByDate());
         assertEquals(numTransactions, transactionManager.getTransactionCount());
     }
 
@@ -419,7 +395,7 @@ public class TransactionManagerTest {
         transactionManager.addTransaction(txn2);
         transactionManager.addTransaction(txn3);
 
-        assertDoesNotThrow(() -> transactionManager.sortTransactions());
+        assertDoesNotThrow(() -> transactionManager.sortTransactionsByDate());
         assertEquals(3, transactionManager.getTransactionCount());
     }
 
@@ -514,7 +490,7 @@ public class TransactionManagerTest {
         transactionManager.addTransaction(txn1);
         transactionManager.addTransaction(txn2);
 
-        transactionManager.sortTransactions();
+        transactionManager.sortTransactionsByDate();
 
         // Original transaction data should be unchanged
         assertEquals(id1, txn1.getTransactionId());
@@ -527,9 +503,7 @@ public class TransactionManagerTest {
         double initialBalance = testAccount.getBalance();
         double depositAmount = 500.0;
 
-        transactionManager.beginTransaction(testAccount, null);
         testAccount.processTransaction(depositAmount, "Deposit");
-        transactionManager.commit();
 
         assertEquals(initialBalance + depositAmount, testAccount.getBalance());
     }
@@ -540,9 +514,7 @@ public class TransactionManagerTest {
         double initialBalance = testAccount.getBalance();
         double withdrawalAmount = 200.0;
 
-        transactionManager.beginTransaction(testAccount, null);
         testAccount.processTransaction(withdrawalAmount, "Withdrawal");
-        transactionManager.commit();
 
         assertEquals(initialBalance - withdrawalAmount, testAccount.getBalance());
     }

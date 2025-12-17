@@ -6,29 +6,38 @@ import com.miracle.src.models.*;
 import com.miracle.src.models.exceptions.AccountNotFoundException;
 import com.miracle.src.models.exceptions.InvalidAmountException;
 import com.miracle.src.models.exceptions.OverdraftExceededException;
-import com.miracle.src.models.exceptions.TransactionFailedException;
+import com.miracle.src.utils.FileIOUtils;
+import com.miracle.src.utils.FunctionalUtils;
+//import com.miracle.src.utils.FileIOUtils;
 
-import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class AccountManager {
 
     // Singleton instance
+    private AtomicInteger accountCount =  new AtomicInteger(0);
     private static final AccountManager INSTANCE = new AccountManager();
 
     public static AccountManager getInstance() {
         return INSTANCE;
     }
-    private final Map<String, Account> accounts = new HashMap<>();
+    private Map<String, Account> accounts = new HashMap<>();
+    private Set<String> newlyCreatedAccountNumbers = new HashSet<>();
     private AccountManager() {
     }
 
-    private int accountCount = 0;
+    public void setAccountCount(AtomicInteger accountCount) {
+        this.accountCount = accountCount;
+    }
 
 
-    public void addAccount(Account account) {
+
+    public boolean addAccount(Account account) {
         if (account == null) {
             throw new IllegalArgumentException("Account cannot be null");
         }
@@ -39,7 +48,8 @@ public class AccountManager {
 
         // Add account to the map if it does not exist.
         accounts.put(account.getAccountNumber(), account);
-        accountCount++;
+        accountCount.getAndIncrement();
+        return true;
     }
 
 
@@ -92,13 +102,11 @@ public class AccountManager {
         }
 
         // Display required totals
-        if(accountCount == 0) {
+        if(accountCount.get() == 0) {
             System.out.println("No accounts found." );
-            return;
         } else{
-             System.out.printf("%nTotal Accounts: %d %n", getAccountCount());
+             System.out.printf("%nTotal Accounts: %d%n", getAccountCount());
              System.out.printf("Total Bank Balance: $%,.2f%n", getTotalBalance());
-             return;
         }
        
     }
@@ -110,37 +118,48 @@ public class AccountManager {
                 .sum();
     }
 
+    public static void loadAccountsOnStart() {
+        FileIOUtils.readAccountsFromFile();
+    }
 
     //    Get the number of accounts opened at the bank.
     public int getAccountCount() {
-        return accountCount;
+        return accountCount.get();
     }
 
 
+    private Account createAccountInternal(AccountRequest req) throws InvalidAmountException {
+        // Input validation
+        if (req == null) {
+            throw new IllegalArgumentException("Account request cannot be null");
+        }
+
+        Customer customer = (req.getCustomerType() == 1)
+                ? new RegularCustomer(req.getName(), req.getAge(), req.getContact(), req.getAddress())
+                : new PremiumCustomer(req.getName(), req.getAge(), req.getContact(), req.getAddress());
+
+        return (req.getAccountType() == 1)
+                ? new SavingsAccount(customer, req.getInitialDeposit())
+                : new CheckingAccount(customer, req.getInitialDeposit());
+    }
+
+    // 3. Simplified createAccount methods
     public void createAccount(AccountRequest req) throws InvalidAmountException {
-
-//        Creating the customer based on the account type selected
-        Customer customer = null;
-        if (req.getCustomerType() == 1) {
-            customer = new RegularCustomer(req.getName(), req.getAge(), req.getContact(), req.getAddress());
-        } else {
-            customer = new PremiumCustomer(req.getName(), req.getAge(), req.getContact(), req.getAddress());
-        }
-
-//        Creating the account based on the type selected
-        Account account;
-        if (req.getAccountType() == 1) {
-            account = new SavingsAccount(customer, req.getInitialDeposit());
-        } else {
-            account = new CheckingAccount(customer, req.getInitialDeposit());
-        }
+        Account account = createAccountInternal(req);
         account.displayAccountDetails();
         addAccount(account);
+        // Track newly created accounts
+        newlyCreatedAccountNumbers.add(account.getAccountNumber());
+    }
+
+    public boolean createAccountFromFile(AccountRequest req) throws InvalidAmountException {
+        Account account = createAccountInternal(req);
+        return addAccount(account);
     }
 
 
     public void processTransaction(TransactionRequest request)
-            throws InvalidAmountException, OverdraftExceededException, AccountNotFoundException, TransactionFailedException {
+            throws InvalidAmountException, OverdraftExceededException, AccountNotFoundException {
         if (request == null) {
             throw new IllegalArgumentException("Transaction request cannot be null");
         }
@@ -169,26 +188,10 @@ public class AccountManager {
 
                 Account receiverAccount = findAccount(receiverAccountNumber);
 
-                // Process transfer as an atomic operation
-                try {
-                    // Start transaction context
-                    TransactionManager txManager = TransactionManager.getInstance();
-                    txManager.beginTransaction(userAccount, receiverAccount);
-
-                    // Process withdrawal from source
-                    userAccount.processTransaction(amount, "Transfer");
-
-                    // Process deposit to target
-                    receiverAccount.processTransaction(amount, "Receive");
-
-                    // Commit transaction if everything succeeds
-                    txManager.commit();
-
-                } catch (Exception e) {
-                    // Rollback will be handled by the TransactionManager
-                    TransactionManager.getInstance().rollback(); // Explicit rollback in case of failure
-                    throw e;
-                }
+                // Perform transfer without TransactionContext; rely on per-account atomic operations
+                // Withdraw from source; if it succeeds, deposit to target.
+                userAccount.processTransaction(amount, "Transfer");
+                receiverAccount.processTransaction(amount, "Receive");
                 break;
 
             default:
@@ -199,7 +202,7 @@ public class AccountManager {
 
 
     public void displayAllCustomers() {
-        if (accountCount == 0) {
+        if (accountCount.get() == 0) {
             System.out.println("\nNo customers found.");
             return;
         }
@@ -223,7 +226,7 @@ public class AccountManager {
         }
 
         System.out.println("=".repeat(100));
-        System.out.printf("Total Customers: %d%n", accountCount);
+        System.out.println("Total Customers: "+ accountCount);
     }
 
 
@@ -255,4 +258,33 @@ public class AccountManager {
         System.out.println("=".repeat(80));
         System.out.printf("Current Balance: $%,.2f%n", account.getBalance());
     }
+
+    public void saveAccountsOnExit() {
+        try {
+            // Build a map of only newly created accounts to persist
+            Map<String, Account> newAccounts = new HashMap<>();
+            for (String accNo : newlyCreatedAccountNumbers) {
+                Account acc = accounts.get(accNo);
+                if (acc != null) {
+                    newAccounts.put(accNo, acc);
+                }
+            }
+
+            if (newAccounts.isEmpty()) {
+                System.out.println("No new accounts to save.");
+                return;
+            }
+
+            // Append only the new accounts to the file
+            FileIOUtils.appendAccountsToFile(newAccounts);
+
+            // Clear the tracker after persisting
+            newlyCreatedAccountNumbers.clear();
+        } catch (Exception e) {
+            System.err.println("Critical error saving accounts: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+
 }

@@ -1,10 +1,13 @@
 package com.miracle.src.models;
 
-public abstract class Customer {
+import java.io.Serializable;
 
+public abstract class Customer implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
 //    Static fields;
-    private static int customerCounter = 0;
+    public static int customerCounter = 0;
 
 //    private fields
     private final String customerId;
