@@ -11,8 +11,6 @@ public abstract class Account implements Serializable {
 
     //    private field
     private String accountNumber;
-    // Balance is accessed by multiple threads during concurrent transactions.
-    // Use volatile + per-account lock to ensure visibility and atomic updates.
     private volatile double balance;
     private String status = "Active";
     private final Customer customer;

@@ -7,7 +7,6 @@ import com.miracle.src.models.exceptions.AccountNotFoundException;
 import com.miracle.src.models.exceptions.InvalidAmountException;
 import com.miracle.src.models.exceptions.OverdraftExceededException;
 import com.miracle.src.utils.FileIOUtils;
-import com.miracle.src.utils.FunctionalUtils;
 //import com.miracle.src.utils.FileIOUtils;
 
 import java.util.HashMap;
@@ -35,18 +34,14 @@ public class AccountManager {
         this.accountCount = accountCount;
     }
 
-
-
     public boolean addAccount(Account account) {
         if (account == null) {
             throw new IllegalArgumentException("Account cannot be null");
         }
-        // Check if account already exist
         if (accounts.containsKey(account.getAccountNumber())) {
             throw new IllegalArgumentException("Account already exists in the system");
         }
 
-        // Add account to the map if it does not exist.
         accounts.put(account.getAccountNumber(), account);
         accountCount.getAndIncrement();
         return true;
@@ -152,9 +147,9 @@ public class AccountManager {
         newlyCreatedAccountNumbers.add(account.getAccountNumber());
     }
 
-    public boolean createAccountFromFile(AccountRequest req) throws InvalidAmountException {
+    public void createAccountFromFile(AccountRequest req) throws InvalidAmountException {
         Account account = createAccountInternal(req);
-        return addAccount(account);
+        addAccount(account);
     }
 
 
@@ -187,9 +182,6 @@ public class AccountManager {
                 }
 
                 Account receiverAccount = findAccount(receiverAccountNumber);
-
-                // Perform transfer without TransactionContext; rely on per-account atomic operations
-                // Withdraw from source; if it succeeds, deposit to target.
                 userAccount.processTransaction(amount, "Transfer");
                 receiverAccount.processTransaction(amount, "Receive");
                 break;
@@ -230,38 +222,8 @@ public class AccountManager {
     }
 
 
-    // Add this method to get transaction history for an account
-    public void displayTransactionHistory(String accountNumber) throws AccountNotFoundException {
-        Account account = findAccount(accountNumber);
-        System.out.println("\nTransaction History for Account: " + accountNumber);
-        System.out.println("=".repeat(100));
-
-        // Get transactions from TransactionManager
-        List<Transaction> transactions = TransactionManager.getInstance()
-                .getTransactionsByAccount(accountNumber);
-
-        if (transactions.isEmpty()) {
-            System.out.println("No transactions found.");
-            return;
-        }
-
-        // Display header
-        System.out.printf("| %-10s | %-20s | %-15s | %-12s | %-12s |%n",
-                "ID", "Date/Time", "Type", "Amount", "Balance");
-        System.out.println("-".repeat(80));
-
-        // Display transactions
-        for (Transaction t : transactions) {
-            t.displayTransactionDetails();
-        }
-
-        System.out.println("=".repeat(80));
-        System.out.printf("Current Balance: $%,.2f%n", account.getBalance());
-    }
-
     public void saveAccountsOnExit() {
         try {
-            // Build a map of only newly created accounts to persist
             Map<String, Account> newAccounts = new HashMap<>();
             for (String accNo : newlyCreatedAccountNumbers) {
                 Account acc = accounts.get(accNo);
@@ -275,7 +237,6 @@ public class AccountManager {
                 return;
             }
 
-            // Append only the new accounts to the file
             FileIOUtils.appendAccountsToFile(newAccounts);
 
             // Clear the tracker after persisting
