@@ -2,21 +2,14 @@ package com.miracle;
 // Import all necessary packages
 import com.miracle.src.handlers.AccountCreationHandler;
 import com.miracle.src.handlers.TransactionHandler;
-import com.miracle.src.models.Account;
-import com.miracle.src.models.CheckingAccount;
-import com.miracle.src.models.Customer;
-import com.miracle.src.models.RegularCustomer;
-import com.miracle.src.models.exceptions.AccountNotFoundException;
+import com.miracle.src.models.*;
+import com.miracle.src.models.exceptions.InsufficientFundsException;
 import com.miracle.src.models.exceptions.InvalidAmountException;
 import com.miracle.src.models.exceptions.OverdraftExceededException;
 import com.miracle.src.services.*;
-import com.miracle.src.utils.ConcurrencyUtils;
-import com.miracle.src.utils.FileIOUtils;
-import com.miracle.src.utils.InputUtils;
-import com.miracle.src.utils.ValidationUtils;
+import com.miracle.src.utils.*;
 import com.miracle.src.services.*;
 
-import javax.swing.plaf.synth.SynthOptionPaneUI;
 
 import org.junit.platform.engine.discovery.DiscoverySelectors;
 import org.junit.platform.launcher.Launcher;
@@ -108,7 +101,7 @@ public class Main {
                     System.out.println("\nInvalid choice. Please select an option between 1 and 6.\n");
             }
 
-        } catch (InvalidAmountException | OverdraftExceededException e) {
+        } catch (InvalidAmountException | OverdraftExceededException | InsufficientFundsException e) {
             System.out.println("\nERROR: " + e.getMessage());
         }
 
@@ -140,9 +133,11 @@ public class Main {
         System.out.println("-".repeat(50));
         System.out.println("1. View ALL Transactions");
         System.out.println("2. View Transactions By Account");
-        System.out.println("3. View Account Details");
-        System.out.println("4. Generate Bank Statment");
-        System.out.println("5. View all customers");
+        System.out.println("3. View All Deposit Transactions");
+        System.out.println("4. View All Withdrawal Transactions");
+        System.out.println("5. View Account Details");
+        System.out.println("6. Generate Bank Statment");
+        System.out.println("7. View all customers");
         System.out.println("0. Back to Main Menu");
         System.out.println("\n");
 
@@ -153,20 +148,24 @@ public class Main {
             case 1:
                 StatementGenerator.displayAllTransactions();
                 break;
-
             case 2:
                 String accountNumber = ValidationUtils.getValidAccountNumber("Enter Account Number:> ");
                 StatementGenerator.viewAllTransactionByAccount(accountNumber);
                 break;
-
             case 3:
+                StatementGenerator.viewTransactionsByType("Deposit");
+                break;
+            case 4:
+                StatementGenerator.viewTransactionsByType("Withdrawal");
+                break;
+            case 5:
                 String accNum = ValidationUtils.getValidAccountNumber("Enter Account Number:> ");
                 StatementGenerator.displayAccountDetail(accNum);
                 break;
-            case 4:
+            case 6:
                 StatementGenerator.requestAndGenerateStatement();
                 break;
-            case 5:
+            case 7:
                 accountManager.displayAllCustomers();
                 break;
             case 0:
@@ -255,8 +254,6 @@ public class Main {
         Customer customer = new RegularCustomer("John", 88, "0555555555", "123 kumasi");
         Account account = new CheckingAccount(customer, 1000.0); // Starting with $1000
     ConcurrencyUtils.runConcurrentTransactions(account);
-
-    // Make sure to call shutdown when done
     }
 
 

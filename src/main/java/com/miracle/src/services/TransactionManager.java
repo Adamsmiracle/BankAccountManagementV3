@@ -10,6 +10,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 public class TransactionManager {
     private static final TransactionManager INSTANCE = new TransactionManager();
+    private static final int maxTransactions = 200;
     private static final List<Transaction> transactions = new ArrayList<>();
     private static final List<Transaction> newTransactions = new CopyOnWriteArrayList<>();
 
@@ -26,10 +27,27 @@ public class TransactionManager {
         if (transaction == null) {
             throw new IllegalArgumentException("Transaction cannot be null");
         }
+
+        if (transactions.size() >= maxTransactions) {
+            System.out.println("Transaction limit reached. Dropping transaction:");
+        } else {
             transactions.add(transaction);
             newTransactions.add(transaction);
         }
+        }
 
+
+    public static List<Transaction> filterTransactionsByType(String type) {
+        if (transactions == null || type == null) {
+            return Collections.emptyList();
+        }
+
+        String normalizedType = type.trim().toUpperCase();
+        return transactions.stream()
+                .filter(t -> t != null && t.getType() != null)
+                .filter(t -> t.getType().toUpperCase().equals(normalizedType))
+                .collect(Collectors.toList());
+    }
 
 
     public List<Transaction> getTransactionsByAccount(String accountNumber) {
@@ -49,6 +67,11 @@ public class TransactionManager {
     }
 
 
+    public List<Transaction> sorTransactionsByID(){
+        return FunctionalUtils.sortTransactionsByIdDescending(transactions);
+    }
+
+
     public Transaction getTransaction(int index) {
         if (index < 0 || index >= transactions.size()) {
             throw new IndexOutOfBoundsException("Invalid transaction index: " + index);
@@ -58,17 +81,6 @@ public class TransactionManager {
 
     public int getTransactionCount() {
         return transactions.size();
-    }
-
-    /**
-     * Gets transactions of a specific type
-     * @param type The transaction type (e.g., "DEPOSIT", "WITHDRAWAL", "TRANSFER")
-     * @return A list of transactions of the specified type
-     */
-    public List<Transaction> getTransactionsByType(String type) {
-        return transactions.stream()
-                .filter(t -> t.getType().equalsIgnoreCase(type))
-                .collect(Collectors.toList());
     }
 
 

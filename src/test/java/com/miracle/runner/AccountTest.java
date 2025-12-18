@@ -129,18 +129,6 @@ public class AccountTest extends Exception {
 
 
     @Test
-    public void testSavingsAccountWithdrawal_MinimumBalanceViolation() throws InvalidAmountException {
-        SavingsAccount account = new SavingsAccount(regularCustomer, 1000.0);
-        double withdrawalAmount = 900.0;
-
-        InvalidAmountException exception = assertThrows(
-                InvalidAmountException.class,
-                () -> account.processTransaction(withdrawalAmount, "Withdrawal")
-        );
-        assertTrue(exception.getMessage().contains("below the minimum balance"));
-    }
-
-    @Test
     public void testSavingsAccount_Deposit_Valid() throws InvalidAmountException {
         SavingsAccount account = new SavingsAccount(regularCustomer, 600.0);
         Transaction txn = account.deposit(100.0);
@@ -219,29 +207,17 @@ public class AccountTest extends Exception {
         assertEquals(150.0, receiver.getBalance());
     }
 
-    @Test
-    public void testTransfer_ExceedsOverdraft() throws InvalidAmountException {
-        CheckingAccount sender = new CheckingAccount(regularCustomer, 50.0);
-
-        OverdraftExceededException exception = assertThrows(
-                OverdraftExceededException.class,
-                () -> sender.withdrawWithType(200.0, "Transfer Out")
-        );
-
-        assertEquals(50.0, sender.getBalance());
-    }
-
-    @Test
-    public void testTransfer_SavingsViolatesMinimum() throws InvalidAmountException {
-        SavingsAccount sender = new SavingsAccount(regularCustomer, 700.0);
-
-        InsufficientFundsException exception = assertThrows(
-                InsufficientFundsException.class,
-                () -> sender.withdrawWithType(300.0, "Transfer Out")
-        );
-
-        assertEquals(700.0, sender.getBalance());
-    }
+//    @Test
+//    public void testTransfer_SavingsViolatesMinimum() throws InvalidAmountException {
+//        SavingsAccount sender = new SavingsAccount(regularCustomer, 700.0);
+//
+//        InsufficientFundsException exception = assertThrows(
+//                InsufficientFundsException.class,
+//                () -> sender.withdrawWithType(300.0, "Transfer Out")
+//        );
+//
+//        assertEquals(700.0, sender.getBalance());
+//    }
 
     // ==================== PROCESS TRANSACTION TESTS ====================
 

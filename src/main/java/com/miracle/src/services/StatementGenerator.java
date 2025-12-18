@@ -17,6 +17,39 @@ public class StatementGenerator {
 
 
 
+    public static void viewTransactionsByType(String transactionType) {
+
+            List<Transaction> transactions = TransactionManager.getInstance().filterTransactionsByType(transactionType);
+            System.out.println("\nTRANSACTION HISTORY FOR : "+ transactionType.toUpperCase()+ "S");
+            System.out.println("=".repeat(85));
+            System.out.printf("| %-6s | %-20s | %-13s | %-12s | %-10s |\n",
+                    "ID", "TIMESTAMP", "TYPE", "AMOUNT", "BALANCE AFTER");
+            System.out.println("-".repeat(85));
+            int transactionCount = 0;
+            for (Transaction t : transactions) {
+                transactionCount++;
+                    System.out.printf("| %-6s | %-20s | %-13s | $%-11.2f | $%-9.2f |\n",
+                            t.getTransactionId(),
+                            t.getFormattedTimestamp(),
+                            t.getType().toUpperCase(),
+                            t.getAmount(),
+                            t.getBalanceAfter()
+                    );
+
+            }
+
+            System.out.println("-".repeat(85));
+
+            if (transactionCount == 0) {
+                System.out.println("| No "+transactionType +" transactions found for this .                                      |");
+                System.out.println("-".repeat(85));
+            } else {
+                System.out.printf("\nTotal Transactions: %d\n", transactionCount);
+            }
+
+    }
+
+
     public static void viewAllTransactionByAccount(String accountNumber) {
 
         try {
@@ -96,7 +129,7 @@ public class StatementGenerator {
 
     public static void displayAllTransactions() {
         List<Transaction> sortedTransactions;
-        sortedTransactions = transactionManager.sortTransactionsByDate();
+        sortedTransactions = transactionManager.sorTransactionsByID();
 
         if (sortedTransactions.isEmpty()) {
             System.out.println("\nNo transactions found.");
@@ -104,16 +137,16 @@ public class StatementGenerator {
         }
 
         System.out.println("\nALL TRANSACTIONS");
-        System.out.println("=".repeat(90));
-        System.out.printf("| %-6s | %-12s | %-15s | %-15s | %-12s | %-12s |\n",
+        System.out.println("=".repeat(100));
+        System.out.printf("| %-6s | %-12s | %-15s | %-25s | %-12s | %-12s |\n",
                 "ID", "ACCOUNT", "TYPE", "TIMESTAMP", "AMOUNT", "BALANCE");
-        System.out.println("-".repeat(90));
+        System.out.println("-".repeat(100));
 
         // Display using streams over the in-memory collection
         sortedTransactions.stream()
                 .filter(java.util.Objects::nonNull)
                 .forEach(t -> System.out.printf(
-                        "| %-6s | %-12s | %-15s | %-15s | $%-11.2f | $%-11.2f |\n",
+                        "| %-6s | %-12s | %-15s | %-25s | $%-11.2f | $%-11.2f |\n",
                         t.getTransactionId(),
                         t.getAccountNumber(),
                         t.getType(),
@@ -122,7 +155,7 @@ public class StatementGenerator {
                         t.getBalanceAfter()
                 ));
 
-        System.out.println("=".repeat(90));
+        System.out.println("=".repeat(100));
     }
 
     public static void displayAccountDetail(String accountNumber) {

@@ -189,12 +189,13 @@ public class AccountManager {
                         throw new IllegalArgumentException("Receiver account number is required for transfer");
                     }
 
+
                     Account receiverAccount = findAccount(receiverAccountNumber);
                     // First withdraw from source
-                    userAccount.processTransaction(amount, "Transfer_Out");
+                    userAccount.processTransaction(amount, "Transfer");
                     // Then deposit to receiver
                     try {
-                        receiverAccount.processTransaction(amount, "Transfer_In");
+                        receiverAccount.processTransaction(amount, "Receive");
                     } catch (Exception e) {
                         // If deposit to receiver fails, refund the source account
                         userAccount.deposit(amount);
@@ -260,7 +261,7 @@ public class AccountManager {
                 return;
             }
 
-            FileIOUtils.appendAccountsToFile(newAccounts);
+            FileIOUtils.saveAccountsToFile(newAccounts);
 
             // Clear the tracker after persisting
             newlyCreatedAccountNumbers.clear();

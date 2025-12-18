@@ -2,6 +2,7 @@ package com.miracle.src.utils;
 
 import com.miracle.src.dto.TransactionRequest;
 import com.miracle.src.models.Account;
+import com.miracle.src.models.CheckingAccount;
 import com.miracle.src.models.SavingsAccount;
 import com.miracle.src.services.AccountManager;
 
@@ -101,16 +102,60 @@ public class TransactionProcessingInput {
             double resultingBalance = "Deposit".equalsIgnoreCase(transactionType) ?
                     previousBalance + amount : previousBalance - amount;
 
-
-            if (senderAccount.getAccountType().equalsIgnoreCase("savingsAccount") && resultingBalance < SavingsAccount.getMinimumBalance() &&
+            if (senderAccount.getAccountType().equalsIgnoreCase("Savings") &&
+                    resultingBalance < SavingsAccount.getMinimumBalance() &&
                     !"Deposit".equalsIgnoreCase(transactionType)) {
-                System.out.printf("Amount too high. Transaction would violate minimum balance of $%,.2f. Enter a different amount.\n",
+
+                System.out.printf("\nWARNING: This transaction would violate the minimum balance of $%,.2f%n",
                         SavingsAccount.getMinimumBalance());
-                continue; // ask again
+                System.out.printf("Current balance: $%,.2f%n", previousBalance);
+                System.out.printf("Withdrawal amount: $%,.2f%n", amount);
+                System.out.printf("Resulting balance: $%,.2f%n", resultingBalance);
+
+                System.out.println("\nOptions:");
+                System.out.println("1. Enter a different amount");
+                System.out.println("2. Choose a different transaction type");
+                System.out.println("3. Return to main menu");
+
+                int option = InputUtils.readInt("Select option (1-3): ");
+                if (option == 2) {
+                    System.out.println("Returning to transaction type selection...");
+                    return processTransactionMain(); // Restart the transaction process
+                } else if (option == 3) {
+                    System.out.println("Returning to main menu...");
+                    return null;
+                }
+                continue;
             }
 
-            break; // valid amount
+            if (senderAccount.getAccountType().equalsIgnoreCase("Checking") &&
+                    resultingBalance < -CheckingAccount.getOverDraftLimit()) {
+
+                System.out.printf("\nWARNING: This transaction would exceed your overdraft limit of $%,.2f%n",
+                        CheckingAccount.getOverDraftLimit());
+                System.out.printf("Current balance: $%,.2f%n", previousBalance);
+                System.out.printf("Transaction amount: $%,.2f%n", amount);
+                System.out.printf("Resulting balance: $%,.2f%n", resultingBalance);
+
+                System.out.println("\nOptions:");
+                System.out.println("1. Enter a smaller amount");
+                System.out.println("2. Choose a different transaction type");
+                System.out.println("3. Return to main menu");
+
+                int option = InputUtils.readInt("Select option (1-3): ");
+                if (option == 2) {
+                    System.out.println("Returning to transaction type selection...");
+                    return processTransactionMain();
+                } else if (option == 3) {
+                    System.out.println("Returning to main menu...");
+                    return null;
+                }
+                continue;
+            }
+
+            break;
         }
+
 
         // --- New Balance Calculation ---
         double newBalance = "Deposit".equalsIgnoreCase(transactionType) ?
@@ -135,7 +180,7 @@ public class TransactionProcessingInput {
             return null;
         }else{
 
-            InputUtils.show("processing Transaction...", 3);                
+            InputUtils.show("processing Transaction...", 1);
              TransactionRequest request = new TransactionRequest(senderAccountNumber, recipientAccountNumber, transactionType, amount);
             System.out.println("Transaction Completed Successfully");
             return request;

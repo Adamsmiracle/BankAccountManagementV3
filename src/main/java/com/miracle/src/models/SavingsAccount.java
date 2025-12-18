@@ -144,17 +144,11 @@ public class SavingsAccount extends Account implements Serializable {
             super.updateBalance(resultingBalanceFinal);
 
             // Record the transaction
-            new Transaction(
-                    this.getAccountNumber(),
-                    transactionType,
-                    amount,
-                    resultingBalanceFinal
-            );
             newTransaction = new Transaction(
                     this.getAccountNumber(),
                     transactionType,
-                    amount,
-                    resultingBalanceFinal
+                    -amount,
+                    this.getBalance()
             );
         manager.addTransaction(newTransaction);
         return newTransaction;

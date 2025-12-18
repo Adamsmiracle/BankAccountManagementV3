@@ -33,45 +33,8 @@ public class FileIOUtils {
     private static final Path transactionFile = Paths.get(DATA_DIR, TRANSACTIONS_FILE_NAME);
 
 
-    public static void saveAccountToFile(Map<String, Account> accounts) {
-        List<String> lines = serializeAccounts(accounts);
-        Path backupFile = Paths.get(DATA_DIR, ACCOUNTS_FILE_NAME + ".bak");
-        
-        try {
-            if (Files.exists(accountFile)) {
-                Files.copy(accountFile, backupFile, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-            }
-            
-            // Write new data
-            Files.write(
-                    accountFile,
-                    lines,
-                    StandardOpenOption.CREATE,
-                    StandardOpenOption.WRITE,
-                    StandardOpenOption.TRUNCATE_EXISTING
-            );
-            System.out.println("Successfully saved " + lines.size() + " accounts.");
-            
-            if (Files.exists(backupFile)) {
-                Files.delete(backupFile);
-            }
-        } catch (IOException e) {
-            System.err.println("Failed to write accounts to file: " + e.getMessage());
-            
-            // Attempt to restore from backup
-            try {
-                if (Files.exists(backupFile)) {
-                    Files.copy(backupFile, accountFile, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-                    System.err.println("Restored accounts from backup.");
-                }
-            } catch (IOException restoreError) {
-                System.err.println("Failed to restore backup: " + restoreError.getMessage());
-            }
-        }
-    }
-
     // Append only the provided accounts to the accounts file without touching existing data
-    public static void appendAccountsToFile(Map<String, Account> accountsToAppend) {
+    public static void saveAccountsToFile(Map<String, Account> accountsToAppend) {
         if (accountsToAppend == null || accountsToAppend.isEmpty()) {
             System.out.println("No new accounts to save.");
             return;
@@ -149,33 +112,6 @@ public class FileIOUtils {
         return (parts.length > 0) ? parts[0].trim() : null;
     }
 
-
-    public static void writeToTransaction() {
-        try {
-            ensureDataDirExists();
-            if (Files.notExists(transactionFile)) {
-                Files.createFile(transactionFile);
-            }
-        } catch (IOException ignored) {
-        }
-    }
-
-    // Persist a single transaction entry to the transactions file
-    public static void SaveTransactionToFile(Transaction txn) {
-        if (txn == null) return;
-        String line = serializeTransaction(txn);
-        try {
-            ensureDataDirExists();
-            Files.write(
-                    transactionFile,
-                    List.of(line),
-                    StandardOpenOption.CREATE,
-                    StandardOpenOption.APPEND
-            );
-        } catch (IOException e) {
-            System.err.println("Failed to append transaction: " + e.getMessage());
-        }
-    }
 
 
 
@@ -334,35 +270,23 @@ public class FileIOUtils {
             return;
         }
 
-        String[] column = line.split("\\|");
+        String[] columns = line.split("\\|");
+        if (columns.length < 8) {
+            System.err.println("Invalid account format. Expected 8 fields but got " + columns.length);
+            return;
+        }
 
         try {
             int index = 0;
-            String accountNumber = column[index++].trim();
-            String customerName = column[index++].trim();
-            int customerAge = Integer.parseInt(column[index++].trim());
-            String customerContact = column[index++].trim();
-            String customerAddress = column[index++].trim();
-
-            // Determine if we have customer ID or if we're at customer type
-            String customerId;
-            String customerType;
-
-            if (column.length == 9) {
-                // New format with customer ID
-                customerId = column[index++].trim();
-                customerType = column[index++].trim();
-            } else if (column.length == 8) {
-                // Old format without customer ID
-                customerId = "CUS" + String.format("%03d", Customer.customerCounter++);
-                customerType = column[index++].trim();
-            } else {
-                System.err.println("Invalid account format: " + line);
-                return;
-            }
-
-            String accountType = column[index++].trim();
-            double balance = Double.parseDouble(column[index].trim());
+            String accountNumber = columns[index++].trim();
+            String customerName = columns[index++].trim();
+            int customerAge = Integer.parseInt(columns[index++].trim());
+            String customerContact = columns[index++].trim();
+            String customerAddress = columns[index++].trim();
+            String customerId = columns[index++].trim();
+            String customerType = columns[index++].trim();
+            String accountType = columns[index++].trim();
+            double balance = Double.parseDouble(columns[index].trim());
 
             // Create the account request
             AccountRequest request = new AccountRequest(

@@ -7,7 +7,7 @@ import com.miracle.src.services.TransactionManager;
 
 public class CheckingAccount extends Account {
 
-    private double overDraftLimit = 1000.00; // Updated overdraft limit to $1000.00
+    private static double overDraftLimit = 1000.00; // Updated overdraft limit to $1000.00
     private final double monthlyFee = 10.00;
     private final TransactionManager manager = TransactionManager.getInstance();
 
@@ -122,7 +122,7 @@ public class CheckingAccount extends Account {
         return monthlyFee;
     }
 
-    public double getOverDraftLimit() {
+    public static double getOverDraftLimit() {
         return overDraftLimit;
     }
 
@@ -154,15 +154,14 @@ public class CheckingAccount extends Account {
             throw new InvalidAmountException(amount);
         }
         Transaction newTransaction;
-            double resultingBalance = this.getBalance() - amount;
-
-            if (resultingBalance < -getOverDraftLimit()) {
-                throw new OverdraftExceededException(
+        double resultingBalance = super.getBalance() - amount;
+        if (resultingBalance < -getOverDraftLimit()) {
+            throw new OverdraftExceededException(
                     this.getBalance(),
                     amount,
                     getOverDraftLimit()
-                );
-            }
+            );
+        }
 
             if (amount > this.getBalance() + overDraftLimit) {
                 throw new OverdraftExceededException(this.getBalance(), amount, overDraftLimit);
@@ -173,8 +172,8 @@ public class CheckingAccount extends Account {
             newTransaction = new Transaction(
                     this.getAccountNumber(),
                     transactionType,
-                    amount,
-                    resultingBalance
+                    -amount,
+                    this.getBalance()
             );
         manager.addTransaction(newTransaction);
         return newTransaction;
