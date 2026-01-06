@@ -1,2 +1,1 @@
-ACC001|her her|23|0555555555|34 kua|CUS001|Regular|Savings|658.00
-ACC002|him him|23|0555555555|23 kumasi|CUS002|Premium|Checking|12012.00
+ACC001|Adams Miracle|44|0555555555|44 kumasi|CUS001|Regular|Savings|1200.00

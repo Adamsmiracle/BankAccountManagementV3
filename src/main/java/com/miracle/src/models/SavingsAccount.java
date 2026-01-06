@@ -42,6 +42,22 @@ public class SavingsAccount extends Account implements Serializable {
         }
     }
 
+    /**
+     * Constructor for loading account from file.
+     * Does NOT create an initial deposit transaction and preserves the account number.
+     *
+     * @param customer the customer
+     * @param balance the current balance
+     * @param accountNumber the original account number to preserve
+     * @param fromFile flag to indicate this is loaded from file (just for method signature distinction)
+     */
+    public SavingsAccount(Customer customer, double balance, String accountNumber, boolean fromFile) {
+        super(customer, accountNumber, fromFile);  // Use the file-loading constructor
+        this.setStatus("Active");
+        super.updateBalance(balance);
+        // No transaction is created - it should already exist in transactions.txt
+    }
+
 
 
     @Override
@@ -143,11 +159,11 @@ public class SavingsAccount extends Account implements Serializable {
             double resultingBalanceFinal = this.getBalance() - amount;
             super.updateBalance(resultingBalanceFinal);
 
-            // Record the transaction
+            // Record the transaction (amount is always positive, type indicates direction)
             newTransaction = new Transaction(
                     this.getAccountNumber(),
                     transactionType,
-                    -amount,
+                    amount,
                     this.getBalance()
             );
         manager.addTransaction(newTransaction);

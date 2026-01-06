@@ -1,8 +1,6 @@
 package com.miracle.src.utils;
 
-import com.miracle.src.dto.AccountRequest;
 import com.miracle.src.models.*;
-import com.miracle.src.models.exceptions.InvalidAmountException;
 import com.miracle.src.services.AccountManager;
 import com.miracle.src.services.TransactionManager;
 
@@ -13,12 +11,13 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.*;
 import java.util.stream.Collectors;
 
 import static com.miracle.src.models.Transaction.TIMESTAMP_FORMATTER;
 
+/**
+ * The type File io utils.
+ */
 public class FileIOUtils {
     private static final String DATA_DIR = "src/main/java/com/miracle/data";
 
@@ -33,7 +32,11 @@ public class FileIOUtils {
     private static final Path transactionFile = Paths.get(DATA_DIR, TRANSACTIONS_FILE_NAME);
 
 
-    // Append only the provided accounts to the accounts file without touching existing data
+    /**
+     * Save accounts to file.
+     *
+     * @param accountsToAppend the accounts to append
+     */
     public static void saveAccountsToFile(Map<String, Account> accountsToAppend) {
         if (accountsToAppend == null || accountsToAppend.isEmpty()) {
             System.out.println("No new accounts to save.");
@@ -55,6 +58,11 @@ public class FileIOUtils {
     }
 
 
+    /**
+     * Read accounts from file list.
+     *
+     * @return the list
+     */
     public static List<String> readAccountsFromFile() {
         if (Files.notExists(accountFile)) {
             System.err.println("Account file does not exist: " + accountFile);
@@ -64,25 +72,20 @@ public class FileIOUtils {
         List<String> loadedAccounts = new ArrayList<>();
         try {
             // Get existing account numbers for quick lookup
-            Set<String> existingAccountNumbers = new HashSet<>(
-                    accountManager.getAllAccounts().stream()
-                            .map(Account::getAccountNumber)
-                            .collect(Collectors.toSet())
-            );
+            Set<String> existingAccountNumbers = accountManager.getAllAccounts().stream()
+                    .map(Account::getAccountNumber).collect(Collectors.toSet());
 
             // Read and process lines
             List<String> lines = Files.readAllLines(accountFile).stream()
                     .filter(line -> !line.trim().isEmpty())
                     .toList();
 
-            int skippedCount = 0;
             int loadedCount = 0;
 
             for (String line : lines) {
                 String accountNumber = extractAccountNumber(line);
                 if (accountNumber != null) {
                     if (existingAccountNumbers.contains(accountNumber)) {
-                        skippedCount++;
                         continue;
                     }
                     parseAccount(line);
@@ -91,11 +94,7 @@ public class FileIOUtils {
                 }
             }
 
-            // Update account count
-            int totalAccounts = accountManager.getAccountCount();
-            accountManager.setAccountCount(new AtomicInteger(totalAccounts + loadedCount));
-
-            System.out.printf(loadedCount + " accounts loaded Successfully from accounts.txt.\n");
+            System.out.printf(loadedCount + " accounts loaded successfully from accounts.txt.\n");
 
         } catch (IOException e) {
             System.err.println("Failed to load accounts from file: " + e.getMessage());
@@ -103,7 +102,10 @@ public class FileIOUtils {
         return loadedAccounts;
     }
 
-    // Helper method to extract account number from a line
+
+
+
+
     private static String extractAccountNumber(String line) {
         if (line == null || line.trim().isEmpty()) {
             return null;
@@ -113,9 +115,12 @@ public class FileIOUtils {
     }
 
 
-
-
-    // Factory to rebuild a transaction from a serialized line
+    /**
+     * Deserialize transactions.
+     *
+     * @param line the line
+     * @return the transaction
+     */
     public static Transaction deserializeTransaction(String line) {
         if (line == null || line.trim().isEmpty()) return null;
         String[] parts = line.split("\\|");
@@ -129,76 +134,71 @@ public class FileIOUtils {
         return new Transaction(id, accNo, type, amount, balanceAfter, ts);
     }
 
+    /**
+     * Read transactions from file.
+     *
+     * @return the list
+     */
     public static List<Transaction> readTransactionsFromFile() {
-        List<Transaction> newTransactions = new ArrayList<>();
+        List<Transaction> loadedTransactions = new ArrayList<>();
         try {
             ensureDataDirExists();
 
             if (Files.notExists(transactionFile)) {
                 System.out.println("No transaction file found at: " + transactionFile);
-                return newTransactions;
+                return loadedTransactions;
             }
-
-            // Get existing transactions for comparison
-            List<Transaction> existingTransactions = TransactionManager.getInstance().getAllTransactions();
-            Set<Transaction> existingTransactionSet = new HashSet<>(existingTransactions);
 
             // Read and process lines
-            List<String> lines;
-            try {
-                lines = Files.readAllLines(transactionFile);
-            } catch (IOException e) {
-                System.err.println("Error reading transaction file: " + e.getMessage());
-                return newTransactions;
-            }
+            List<String> lines = Files.readAllLines(transactionFile)
+                    .stream()
+                    .filter(line -> !line.trim().isEmpty())
+                    .toList();
 
-            int loadedCount = 0;
-            int duplicateCount = 0;
-            int errorCount = 0;
+            // Track IDs to avoid duplicates - include both file and in-memory transactions
+            Set<String> existingIds = new HashSet<>();
+
+            // Add IDs of transactions already in memory
+            TransactionManager.getInstance().getAllTransactions().stream()
+                    .filter(t -> t != null && t.getTransactionId() != null)
+                    .forEach(t -> existingIds.add(t.getTransactionId()));
+
+            int skippedCount = 0;
 
             for (String line : lines) {
-                if (line == null || line.trim().isEmpty()) {
-                    continue;
-                }
-
                 try {
                     Transaction t = deserializeTransaction(line.trim());
                     if (t != null && t.getTransactionId() != null) {
-                        // Check if an equivalent transaction already exists
-                        if (!existingTransactionSet.contains(t)) {
-                            newTransactions.add(t);
-                            existingTransactionSet.add(t);
-                            loadedCount++;
+                        // Only add if not already in memory or already loaded from file
+                        if (!existingIds.contains(t.getTransactionId())) {
+                            loadedTransactions.add(t);
+                            existingIds.add(t.getTransactionId());
                         } else {
-                            duplicateCount++;
+                            skippedCount++;
                         }
                     }
                 } catch (Exception e) {
-                    errorCount++;
                     System.err.println("Skipping invalid transaction: " + line);
                     System.err.println("Error: " + e.getMessage());
                 }
             }
 
             // Log summary
-            if (loadedCount > 0 || duplicateCount > 0 || errorCount > 0) {
-                System.out.println( loadedCount + " transactions loaded from transactions.txt: ");
-                if (duplicateCount > 0) {
-                    System.out.println("  - Skipped duplicates: " + duplicateCount);
-                }
-                if (errorCount > 0) {
-                    System.out.println("  - Errors encountered: " + errorCount);
-                }
-            }
+                System.out.println(loadedTransactions.size() + " transactions loaded from transactions.txt");
 
         } catch (Exception e) {
             System.err.println("Fatal error loading transactions: " + e.getMessage());
             e.printStackTrace();
         }
-        return newTransactions;
+        return loadedTransactions;
     }
 
-    // Append multiple transactions (e.g., only new ones) to the file
+    /**
+     * Save transactions to file.
+     *
+     * @param txns the txns
+     */
+// Append multiple transactions (e.g., only new ones) to the file
     public static void saveTransactionsToFile(List<Transaction> txns) {
         if (txns == null || txns.isEmpty()) return;
         List<String> lines = txns.stream()
@@ -227,7 +227,13 @@ public class FileIOUtils {
         }
     }
 
-    // Serialize a transaction into a pipe-delimited line compatible with file storage
+    /**
+     * Serialize transaction string.
+     *
+     * @param t the t
+     * @return the string
+     */
+// Serialize a transaction into a pipe-delimited line compatible with file storage
     public static String serializeTransaction(Transaction t) {
         return String.join("|",
                 t.getTransactionId(),
@@ -240,6 +246,12 @@ public class FileIOUtils {
     }
 
 
+    /**
+     * Serialize accounts list.
+     *
+     * @param accounts the accounts
+     * @return the list
+     */
 //    sE
     public static List<String> serializeAccounts(Map<String, Account> accounts) {
         return accounts.entrySet().stream()
@@ -264,6 +276,11 @@ public class FileIOUtils {
     }
 
 
+    /**
+     * Parse account.
+     *
+     * @param line the line
+     */
     public static void parseAccount(String line) {
         if (line == null || line.trim().isEmpty()) {
             System.err.println("Empty line in account file");
@@ -271,8 +288,8 @@ public class FileIOUtils {
         }
 
         String[] columns = line.split("\\|");
-        if (columns.length < 8) {
-            System.err.println("Invalid account format. Expected 8 fields but got " + columns.length);
+        if (columns.length < 9) {
+            System.err.println("Invalid account format. Expected 9 fields but got " + columns.length);
             return;
         }
 
@@ -288,23 +305,27 @@ public class FileIOUtils {
             String accountType = columns[index++].trim();
             double balance = Double.parseDouble(columns[index].trim());
 
-            // Create the account request
-            AccountRequest request = new AccountRequest(
-                    customerName,
-                    customerAge,
-                    customerContact,
-                    customerAddress,
-                    "Regular".equalsIgnoreCase(customerType) ? 1 : 2,
-                    "Savings".equalsIgnoreCase(accountType) ? 1 : 2,
-                    balance
-            );
+            // Create customer using the file-loading constructor (preserves customer ID)
+            Customer customer;
+            if ("Regular".equalsIgnoreCase(customerType)) {
+                customer = new RegularCustomer(customerName, customerAge, customerContact, customerAddress, customerId, true);
+            } else {
+                customer = new PremiumCustomer(customerName, customerAge, customerContact, customerAddress, customerId, true);
+            }
 
-            accountManager.createAccountFromFile(request);
+            // Create account using the file-loading constructor (preserves account number, no transaction)
+            Account account;
+            if ("Savings".equalsIgnoreCase(accountType)) {
+                account = new SavingsAccount(customer, balance, accountNumber, true);
+            } else {
+                account = new CheckingAccount(customer, balance, accountNumber, true);
+            }
+
+            // Add to account manager without tracking as "newly created"
+            accountManager.addAccountFromFile(account);
 
         } catch (NumberFormatException e) {
             System.err.println("Invalid number format in account data: " + e.getMessage());
-        } catch (InvalidAmountException e) {
-            System.err.println("Invalid amount in account data: " + e.getMessage());
         } catch (Exception e) {
             System.err.println("Error processing account: " + e.getMessage());
             e.printStackTrace();

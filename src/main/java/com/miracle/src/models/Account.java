@@ -23,6 +23,31 @@ public abstract class Account implements Serializable {
         this.accountNumber = String.format("ACC%03d", accountCounter);
     }
 
+    /**
+     * Constructor for loading account from file.
+     * Preserves the original account number and updates the counter if needed.
+     *
+     * @param customer the customer
+     * @param accountNumber the original account number to preserve
+     * @param fromFile flag to indicate this is loaded from file
+     */
+    public Account(Customer customer, String accountNumber, boolean fromFile) {
+        this.customer = customer;
+        this.accountNumber = accountNumber;
+        // Update the counter to be at least as high as this account number
+        // to prevent duplicate account numbers when creating new accounts
+        try {
+            if (accountNumber != null && accountNumber.startsWith("ACC")) {
+                int num = Integer.parseInt(accountNumber.substring(3));
+                if (num > accountCounter) {
+                    accountCounter = num;
+                }
+            }
+        } catch (NumberFormatException ignored) {
+            // If parsing fails, just use the provided account number
+        }
+    }
+
     // Abstract methods for deposit and withdraw
     public abstract Transaction deposit(double amount) throws InvalidAmountException, InsufficientFundsException;
     public abstract Transaction withdraw(double amount) throws InvalidAmountException, OverdraftExceededException, InsufficientFundsException;

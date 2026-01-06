@@ -6,13 +6,23 @@ import com.miracle.src.models.CheckingAccount;
 import com.miracle.src.models.SavingsAccount;
 import com.miracle.src.services.AccountManager;
 
+/**
+ * The type Transaction processing input.
+ */
 public class TransactionProcessingInput {
 
     private static final AccountManager accountManager = AccountManager.getInstance();
 
+
     private TransactionProcessingInput() {}
 
-    public static TransactionRequest processTransactionMain() throws InterruptedException {
+
+    /**
+     * Process transaction main transaction request.
+     *
+     * @return the transaction request
+     */
+    public static TransactionRequest processTransactionMain() {
         System.out.println("\nPROCESS TRANSACTION");
         System.out.println("=".repeat(63));
         System.out.println();
@@ -36,6 +46,18 @@ public class TransactionProcessingInput {
             }
         }
 
+        return processTransactionForAccount(senderAccount, senderAccountNumber);
+    }
+
+    /**
+     * Process transaction for a specific account (skips account number entry).
+     * Called when user selects option 2 to do another transaction type.
+     *
+     * @param senderAccount the account to process transaction for
+     * @param senderAccountNumber the account number
+     * @return the transaction request
+     */
+    public static TransactionRequest processTransactionForAccount(Account senderAccount, String senderAccountNumber) {
         // --- Display account details ---
         System.out.println("\nACCOUNT DETAILS");
         System.out.println("Customer: " + senderAccount.getCustomer().getName());
@@ -80,16 +102,15 @@ public class TransactionProcessingInput {
                 }
 
                 try {
-                    recipientAccount = accountManager.findAccount(recipientAccountNumber);
+                    accountManager.findAccount(recipientAccountNumber);
                     break;
                 } catch (Exception e) {
                     System.out.println("Recipient account not found. Try again!");
-                    continue;
                 }
             }
         }
 
-        // --- Transaction Amount ---
+
         double amount;
         while (true) {
             amount = ValidationUtils.getValidAmount("Enter Amount: ");
@@ -97,8 +118,6 @@ public class TransactionProcessingInput {
                 System.out.println("Amount must be greater than zero.");
                 continue;
             }
-
-            // For withdrawals or transfers, check minimum balance
             double resultingBalance = "Deposit".equalsIgnoreCase(transactionType) ?
                     previousBalance + amount : previousBalance - amount;
 
@@ -120,7 +139,7 @@ public class TransactionProcessingInput {
                 int option = InputUtils.readInt("Select option (1-3): ");
                 if (option == 2) {
                     System.out.println("Returning to transaction type selection...");
-                    return processTransactionMain(); // Restart the transaction process
+                    return processTransactionForAccount(senderAccount, senderAccountNumber);
                 } else if (option == 3) {
                     System.out.println("Returning to main menu...");
                     return null;
@@ -137,6 +156,7 @@ public class TransactionProcessingInput {
                 System.out.printf("Transaction amount: $%,.2f%n", amount);
                 System.out.printf("Resulting balance: $%,.2f%n", resultingBalance);
 
+
                 System.out.println("\nOptions:");
                 System.out.println("1. Enter a smaller amount");
                 System.out.println("2. Choose a different transaction type");
@@ -145,7 +165,7 @@ public class TransactionProcessingInput {
                 int option = InputUtils.readInt("Select option (1-3): ");
                 if (option == 2) {
                     System.out.println("Returning to transaction type selection...");
-                    return processTransactionMain();
+                    return processTransactionForAccount(senderAccount, senderAccountNumber);
                 } else if (option == 3) {
                     System.out.println("Returning to main menu...");
                     return null;

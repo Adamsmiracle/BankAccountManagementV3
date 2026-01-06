@@ -18,6 +18,9 @@ public class AccountCreationInput {
 
     public static AccountRequest collectAccountCreationData() {
 
+        System.out.println(" ACCOUNT CREATION ");
+        System.out.println("=".repeat(30));
+
         try {
 
             String name = ValidationUtils.getValidatedInput(
@@ -29,6 +32,7 @@ public class AccountCreationInput {
                     "Enter customer age: ",
                     "Age must be between 18 and 120"
             );
+            System.out.println("✓ Age accepted!");
 
             String contact = ValidationUtils.getValidatedInput(
                     "Enter customer contact (Eg. 0241081635): ",
@@ -50,7 +54,10 @@ public class AccountCreationInput {
                     System.out.println("2. Premium Customer (Enhanced benefits, min balance $10,000)");
                     customerType = InputUtils.readInt("Select customer type (1-2): ");
 
-                    if (customerType == 1 || customerType == 2) break;
+                    if (customerType == 1 || customerType == 2) {
+                        System.out.println("✓ Customer type accepted: " + (customerType == 1 ? "Regular" : "Premium"));
+                        break;
+                    }
 
                     System.out.println("Invalid customer type\n");
 
@@ -69,7 +76,10 @@ public class AccountCreationInput {
                     System.out.println("2. Checking Account (Overdraft: $1000, Monthly fee: $10)");
                     accountType = InputUtils.readInt("Select account type (1-2): ");
 
-                    if (accountType == 1 || accountType == 2) break;
+                    if (accountType == 1 || accountType == 2) {
+                        System.out.println("✓ Account type accepted: " + (accountType == 1 ? "Savings" : "Checking"));
+                        break;
+                    }
                     System.out.println("Invalid account type\n");
                 } catch (InputMismatchException | NumberFormatException e) {
                     System.out.println("Enter a valid number (1 or 2)");
@@ -93,6 +103,7 @@ public class AccountCreationInput {
                         continue;
                     }
                     
+                    System.out.printf("✓ Initial deposit accepted: $%,.2f%n", initialDeposit);
                     break;
                 } catch (InputMismatchException | NumberFormatException e) {
                     System.out.println("Enter a valid numeric amount\n");

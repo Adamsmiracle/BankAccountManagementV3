@@ -35,6 +35,36 @@ public abstract class Customer implements Serializable {
         this.customerId = String.format("CUS%03d", ++customerCounter);
     }
 
+    /**
+     * Constructor for loading customer from file.
+     * Preserves the original customer ID and updates the counter if needed.
+     *
+     * @param name customer name
+     * @param age customer age
+     * @param contact customer contact
+     * @param address customer address
+     * @param customerId the original customer ID to preserve
+     * @param fromFile flag to indicate this is loaded from file
+     */
+    public Customer(String name, int age, String contact, String address, String customerId, boolean fromFile) {
+        this.name = name.trim();
+        this.age = age;
+        this.contact = contact.trim();
+        this.address = address.trim();
+        this.customerId = customerId;
+        // Update the counter to be at least as high as this customer ID
+        try {
+            if (customerId != null && customerId.startsWith("CUS")) {
+                int num = Integer.parseInt(customerId.substring(3));
+                if (num > customerCounter) {
+                    customerCounter = num;
+                }
+            }
+        } catch (NumberFormatException ignored) {
+            // If parsing fails, just use the provided customer ID
+        }
+    }
+
 //    SETTERS
     public void setName(String name) {
         this.name = name;

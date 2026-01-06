@@ -7,6 +7,13 @@ public class PremiumCustomer extends Customer {
         super(name, age, contact, address);
     }
 
+    /**
+     * Constructor for loading customer from file.
+     */
+    public PremiumCustomer(String name, int age, String contact, String address, String customerId, boolean fromFile) {
+        super(name, age, contact, address, customerId, fromFile);
+    }
+
 
    @Override
     public void displayCustomerDetails() {

@@ -8,6 +8,13 @@ public class RegularCustomer extends Customer implements Serializable {
         super(name, age, contact, address);
     }
 
+    /**
+     * Constructor for loading customer from file.
+     */
+    public RegularCustomer(String name, int age, String contact, String address, String customerId, boolean fromFile) {
+        super(name, age, contact, address, customerId, fromFile);
+    }
+
     @Override
     public void displayCustomerDetails() {
         System.out.println("-".repeat(30));

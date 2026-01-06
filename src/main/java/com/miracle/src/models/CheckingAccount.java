@@ -29,6 +29,22 @@ public class CheckingAccount extends Account {
         manager.addTransaction(initialTransaction);
     }
 
+    /**
+     * Constructor for loading account from file.
+     * Does NOT create an initial deposit transaction and preserves the account number.
+     *
+     * @param customer the customer
+     * @param balance the current balance
+     * @param accountNumber the original account number to preserve
+     * @param fromFile flag to indicate this is loaded from file (just for method signature distinction)
+     */
+    public CheckingAccount(Customer customer, double balance, String accountNumber, boolean fromFile) {
+        super(customer, accountNumber, fromFile);  // Use the file-loading constructor
+        this.setStatus("Active");
+        super.updateBalance(balance);
+        // No transaction is created - it should already exist in transactions.txt
+    }
+
 
 
     @Override
@@ -95,7 +111,7 @@ public class CheckingAccount extends Account {
             newTransaction = new Transaction(
                     this.getAccountNumber(),
                     "Withdrawal",
-                    -amount,
+                    amount,
                     this.getBalance()
             );
         manager.addTransaction(newTransaction);
@@ -172,7 +188,7 @@ public class CheckingAccount extends Account {
             newTransaction = new Transaction(
                     this.getAccountNumber(),
                     transactionType,
-                    -amount,
+                    amount,
                     this.getBalance()
             );
         manager.addTransaction(newTransaction);

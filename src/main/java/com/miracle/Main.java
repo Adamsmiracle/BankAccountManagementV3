@@ -185,22 +185,27 @@ public class Main {
             System.out.println("-".repeat(65));
             System.out.println("\n1. Create Account");
             System.out.println("2. View Accounts");
-            System.out.println("3. Display All customers");
+            System.out.println("3. Display All Customers");
+            System.out.println("0. Back to Main Menu");
 
-            int choice = InputUtils.readInt("Select option (1-3):> ");
+            int choice = InputUtils.readInt("Select option (0-3):> ");
             System.out.println("\n");
 
-            if (choice == 1) {
-                accountCreationHandler.handleCreateAccount();
-                return; // exit method completely
-            } else if (choice == 2) {
-                accountManager.viewAllAccounts();
-                return; // exit method completely
-            } else if (choice == 3) {
-                accountManager.displayAllCustomers();
-                return; // exit method completely
-            } else {
-                System.out.println("Invalid input! Please enter a number between 1 and 3.\n");
+            switch (choice) {
+                case 1:
+                    accountCreationHandler.handleCreateAccount();
+                    return;
+                case 2:
+                    accountManager.viewAllAccounts();
+                    return;
+                case 3:
+                    accountManager.displayAllCustomers();
+                    return;
+                case 0:
+                    System.out.println("Returning to main menu...");
+                    return;
+                default:
+                    System.out.println("Invalid input! Please enter a number between 0 and 3.\n");
             }
         }
     }
@@ -255,6 +260,5 @@ public class Main {
         Account account = new CheckingAccount(customer, 1000.0); // Starting with $1000
     ConcurrencyUtils.runConcurrentTransactions(account);
     }
-
 
 }

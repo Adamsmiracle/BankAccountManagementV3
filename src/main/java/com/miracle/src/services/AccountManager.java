@@ -8,7 +8,6 @@ import com.miracle.src.models.exceptions.InsufficientFundsException;
 import com.miracle.src.models.exceptions.InvalidAmountException;
 import com.miracle.src.models.exceptions.OverdraftExceededException;
 import com.miracle.src.utils.FileIOUtils;
-//import com.miracle.src.utils.FileIOUtils;
 
 import java.io.IOException;
 import java.util.*;
@@ -48,6 +47,25 @@ public class AccountManager {
 
         accounts.put(account.getAccountNumber(), account);
         accountCount.getAndIncrement();
+        return true;
+    }
+
+    /**
+     * Adds an account that was loaded from file.
+     * Does NOT track it as newly created (won't be re-saved).
+     */
+    public boolean addAccountFromFile(Account account) {
+        if (account == null) {
+            throw new IllegalArgumentException("Account cannot be null");
+        }
+        if (accounts.containsKey(account.getAccountNumber())) {
+            // Skip duplicate accounts silently during file load
+            return false;
+        }
+
+        accounts.put(account.getAccountNumber(), account);
+        accountCount.getAndIncrement();
+        // Don't add to newlyCreatedAccountNumbers - this was loaded from file
         return true;
     }
 
@@ -244,6 +262,7 @@ public class AccountManager {
         System.out.println("=".repeat(100));
         System.out.println("Total Customers: "+ accountCount);
     }
+
 
 
     public void saveAccountsOnExit() {
