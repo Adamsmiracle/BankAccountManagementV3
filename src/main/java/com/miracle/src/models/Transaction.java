@@ -44,6 +44,7 @@ public class Transaction {
         updateCounterFromId(transactionId);
     }
 
+
     private static void updateCounterFromId(String id) {
         try {
             Pattern p = Pattern.compile("TXN(\\d{3,})");

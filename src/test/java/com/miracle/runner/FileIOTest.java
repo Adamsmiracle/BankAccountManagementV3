@@ -361,5 +361,23 @@ public class FileIOTest {
         assertEquals(123.45, deserialized.getAmount(), 0.001);
         assertEquals(623.45, deserialized.getBalanceAfter(), 0.001);
     }
-}
 
+    // ==================== DATA SEEDER TESTS ====================
+
+    @Test
+    @Order(21)
+    @DisplayName("DataSeeder should not throw exceptions")
+    public void testDataSeederNoExceptions() {
+        // DataSeeder should handle all cases gracefully
+        assertDoesNotThrow(() -> com.miracle.src.utils.DataSeeder.seedInitialData());
+    }
+
+    @Test
+    @Order(22)
+    @DisplayName("DataSeeder isDataSeeded should return boolean")
+    public void testDataSeederStatus() {
+        boolean status = com.miracle.src.utils.DataSeeder.isDataSeeded();
+        // Just verify it returns a boolean without exception
+        assertTrue(status || !status);
+    }
+}

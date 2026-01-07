@@ -1,1 +1,5 @@
-ACC001|Adams Miracle|44|0555555555|44 kumasi|CUS001|Regular|Savings|1200.00
+ACC003|Kwame Asante|45|0201234567|10 Liberation Road, Kumasi|CUS003|Premium|Savings|18000.00
+ACC004|Efua Owusu|52|0261234567|5 High Street, Takoradi|CUS004|Premium|Checking|25550.00
+ACC001|John Mensah|35|0241234567|15 Independence Ave, Accra|CUS001|Regular|Savings|10000.00
+ACC002|Ama Serwaa|28|0551234567|23 Oxford Street, Osu|CUS002|Regular|Checking|7500.00
+ACC005|Kofi Adjei|22|0541234567|78 Ring Road, Tamale|CUS005|Regular|Savings|1250.00

@@ -37,8 +37,10 @@ public class Main {
     public static void main(String[] args) throws InterruptedException, InvalidAmountException, OverdraftExceededException, IOException {
 
         System.out.println("\n Loading account data from files...\n");
-        AccountManager.loadAccountsOnStart();
-        TransactionManager.loadTransactionsOnStart();
+//        AccountManager.loadAccountsOnStart();
+//        TransactionManager.loadTransactionsOnStart();
+
+        FilePersistenceService.getInstance().loadAllDataOnStartup();
         runMainMenu();
 
 
@@ -215,8 +217,9 @@ public class Main {
         System.out.println("-".repeat(50));
         System.out.println("||            SAVE/LOAD DATA MENU          ||");
         System.out.println("-".repeat(50));
-        System.out.println("1. Save data");
-        System.out.println("2. Load data");
+        System.out.println("1. Save Data");
+        System.out.println("2. Load Data");
+        System.out.println("3. Seed Initial Data (Demo)");
         System.out.println("0. Back to Main Menu");
         System.out.println("\n");
 
@@ -230,8 +233,19 @@ public class Main {
                 transactionManager.saveTransactionsOnExit();
                 break;
             case 2:
+                System.out.println("\nLOADING DATA FROM FILES");
+                System.out.println("=".repeat(30));
                 AccountManager.loadAccountsOnStart();
                 TransactionManager.loadTransactionsOnStart();
+                break;
+            case 3:
+                DataSeeder.seedInitialData();
+                break;
+            case 0:
+                System.out.println("Returning to main menu...");
+                break;
+            default:
+                System.out.println("Invalid choice. Please select 0-3.");
         }
 
     }

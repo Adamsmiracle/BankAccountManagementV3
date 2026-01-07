@@ -25,6 +25,7 @@ public class AccountManager {
 
 //    map for storing accounts
     private Map<String, Account> accounts = new HashMap<>();
+
 //    set for tracking newly created accounts
     private Set<String> newlyCreatedAccountNumbers = new HashSet<>();
 
@@ -47,6 +48,8 @@ public class AccountManager {
 
         accounts.put(account.getAccountNumber(), account);
         accountCount.getAndIncrement();
+        // Track as newly created so it gets saved to file
+        newlyCreatedAccountNumbers.add(account.getAccountNumber());
         return true;
     }
 
@@ -90,32 +93,36 @@ public class AccountManager {
         System.out.printf("| %-8s | %-25s | %-12s | %-14s | %-8s |%n",
                 "ACC NO", "CUSTOMER NAME", "TYPE", "BALANCE", "STATUS");
         System.out.println("-".repeat(83));
-        for (Account account : accounts.values()) {
-            // Line 1: Main Account Details
-            System.out.printf("| %-8s | %-25s | %-12s | $%,-13.2f | %-8s |%n",
-                    account.getAccountNumber(),
-                    account.getCustomer().getName(),
-                    account.getAccountType(),
-                    account.getBalance(),
-                    account.getStatus()
-            );
 
-            // Line two of the output formatter
-            if (account instanceof SavingsAccount savingsAccount) {
-                System.out.printf("| %-8s | Interest Rate: %.1f%% | Min Balance: $%,.2f |%n",
-                        "",
-                        savingsAccount.getInterestRate() * 100,
-                        SavingsAccount.getMinimumBalance()
-                );
-            } else if (account instanceof CheckingAccount checkingAccount) {
-                System.out.printf("| %-8s | Overdraft Limit: $%,.2f | Monthly Fee: $%,.2f |%n",
-                        "",
-                        checkingAccount.getOverDraftLimit(),
-                        account.getCustomer().getCustomerType().equals("Premium") ? 0.00 : checkingAccount.getMonthlyFee()
-                );
-            }
-            System.out.println("-".repeat(83));
-        }
+        // Sort accounts by account number in descending order using streams
+        accounts.values().stream()
+                .sorted((a1, a2) -> a2.getAccountNumber().compareTo(a1.getAccountNumber()))
+                .forEach(account -> {
+                    // Line 1: Main Account Details
+                    System.out.printf("| %-8s | %-25s | %-12s | $%,-13.2f | %-8s |%n",
+                            account.getAccountNumber(),
+                            account.getCustomer().getName(),
+                            account.getAccountType(),
+                            account.getBalance(),
+                            account.getStatus()
+                    );
+
+                    // Line two of the output formatter
+                    if (account instanceof SavingsAccount savingsAccount) {
+                        System.out.printf("| %-8s | Interest Rate: %.1f%% | Min Balance: $%,.2f |%n",
+                                "",
+                                savingsAccount.getInterestRate() * 100,
+                                SavingsAccount.getMinimumBalance()
+                        );
+                    } else if (account instanceof CheckingAccount checkingAccount) {
+                        System.out.printf("| %-8s | Overdraft Limit: $%,.2f | Monthly Fee: $%,.2f |%n",
+                                "",
+                                checkingAccount.getOverDraftLimit(),
+                                account.getCustomer().getCustomerType().equals("Premium") ? 0.00 : checkingAccount.getMonthlyFee()
+                        );
+                    }
+                    System.out.println("-".repeat(83));
+                });
 
         // Display required totals
         if(accountCount.get() == 0) {
@@ -165,14 +172,9 @@ public class AccountManager {
         Account account = createAccountInternal(req);
         account.displayAccountDetails();
         addAccount(account);
-        // Track newly created accounts
-        newlyCreatedAccountNumbers.add(account.getAccountNumber());
+        // addAccount() now tracks newly created accounts automatically
     }
 
-    public void createAccountFromFile(AccountRequest req) throws InvalidAmountException {
-        Account account = createAccountInternal(req);
-        addAccount(account);
-    }
 
 
     public Collection<Account> getAllAccounts() {
